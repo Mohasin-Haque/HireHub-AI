@@ -1,0 +1,76 @@
+import { z } from 'zod';
+
+export const loginSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['EMPLOYER', 'CANDIDATE']),
+});
+
+export const signupSchema = z.object({
+  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['EMPLOYER', 'CANDIDATE']),
+  companyName: z.string().optional(),
+}).refine(
+  (data) => {
+    if (data.role === 'EMPLOYER' && (!data.companyName || data.companyName.trim() === '')) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'Company name is required for Employer account',
+    path: ['companyName'],
+  }
+);
+
+export const resetPasswordSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+});
+
+export const jobPostSchema = z.object({
+  title: z.string().min(3, 'Job title must be at least 3 characters'),
+  companyName: z.string().min(2, 'Company name is required'),
+  companyWebsite: z.string().url('Please enter a valid website URL').optional().or(z.literal('')),
+  location: z.string().min(2, 'Location is required'),
+  workplaceType: z.enum(['REMOTE', 'HYBRID', 'ONSITE']),
+  jobType: z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERNSHIP']),
+  experienceLevel: z.enum(['ENTRY', 'MID', 'SENIOR', 'LEAD', 'EXECUTIVE']),
+  salaryMin: z.number({ invalid_type_error: 'Must be a number' }).min(0, 'Salary cannot be negative'),
+  salaryMax: z.number({ invalid_type_error: 'Must be a number' }).min(0, 'Salary cannot be negative'),
+  salaryCurrency: z.string().default('USD'),
+  description: z.string().min(20, 'Job description must be at least 20 characters'),
+  responsibilities: z.string().min(10, 'Key responsibilities are required'),
+  requirements: z.string().min(10, 'Requirements are required'),
+  benefits: z.string().optional(),
+  tags: z.array(z.string()).min(1, 'Please select or add at least 1 skill tag'),
+});
+
+export const applyJobSchema = z.object({
+  fullName: z.string().min(2, 'Full name is required'),
+  email: z.string().email('Valid email is required'),
+  coverLetter: z.string().min(30, 'Cover letter must be at least 30 characters'),
+  resumeUrl: z.string().url('Please provide a valid resume link').optional().or(z.literal('')),
+});
+
+export const profileSchema = z.object({
+  fullName: z.string().min(2, 'Full name is required'),
+  headline: z.string().min(5, 'Professional headline is required'),
+  bio: z.string().min(15, 'Bio should be at least 15 characters'),
+  phone: z.string().optional(),
+  location: z.string().min(2, 'Location is required'),
+  resumeUrl: z.string().url('Invalid resume URL').optional().or(z.literal('')),
+  website: z.string().url('Invalid website URL').optional().or(z.literal('')),
+  githubUrl: z.string().url('Invalid GitHub URL').optional().or(z.literal('')),
+  linkedinUrl: z.string().url('Invalid LinkedIn URL').optional().or(z.literal('')),
+  skills: z.array(z.string()).min(1, 'Select at least 1 skill'),
+  experienceYrs: z.number().min(0, 'Experience cannot be negative'),
+});
+
+export type LoginInput = z.infer<typeof loginSchema>;
+export type SignupInput = z.infer<typeof signupSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type JobPostInput = z.infer<typeof jobPostSchema>;
+export type ApplyJobInput = z.infer<typeof applyJobSchema>;
+export type ProfileInput = z.infer<typeof profileSchema>;
