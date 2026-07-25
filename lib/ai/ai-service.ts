@@ -94,10 +94,15 @@ function generateSmartFallback(action: string, payload: any) {
 export class AIService {
   private static getOpenAIClient(): OpenAI | null {
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey || apiKey.includes('your-openai-api-key')) {
+    if (!apiKey || apiKey.includes('your-openai-api-key') || apiKey.includes('your-openrouter-api-key')) {
       return null;
     }
-    return new OpenAI({ apiKey });
+
+    const baseURL = process.env.OPENAI_BASE_URL || process.env.OPENAI_API_BASE_URL;
+    return new OpenAI({
+      apiKey,
+      ...(baseURL ? { baseURL } : {}),
+    });
   }
 
   static async generateJobDescription(payload: { title: string; companyName: string; location?: string; skills?: string[] }) {
