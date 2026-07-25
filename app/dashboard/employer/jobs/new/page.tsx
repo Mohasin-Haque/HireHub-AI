@@ -65,15 +65,25 @@ export default function NewJobPage() {
   const handleAIFilled = (data: {
     title?: string;
     description: string;
-    responsibilities: string;
-    requirements: string;
-    benefits?: string;
+    responsibilities: string | string[];
+    requirements: string | string[];
+    benefits?: string | string[];
   }) => {
+    const ensureString = (val: any): string => {
+      if (Array.isArray(val)) {
+        return val.map((item: string) => item.startsWith('•') || item.startsWith('-') ? item : `• ${item}`).join('\n');
+      }
+      if (typeof val === 'string') {
+        return val;
+      }
+      return '';
+    };
+
     if (data.title) setValue('title', data.title);
-    setValue('description', data.description);
-    setValue('responsibilities', data.responsibilities);
-    setValue('requirements', data.requirements);
-    if (data.benefits) setValue('benefits', data.benefits);
+    setValue('description', ensureString(data.description));
+    setValue('responsibilities', ensureString(data.responsibilities));
+    setValue('requirements', ensureString(data.requirements));
+    if (data.benefits) setValue('benefits', ensureString(data.benefits));
     toast.success('AI content applied to form fields!');
   };
 
