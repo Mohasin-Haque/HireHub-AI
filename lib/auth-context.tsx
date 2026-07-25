@@ -33,6 +33,18 @@ const DEFAULT_USER: User = {
   avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
 };
 
+const setSessionCookie = (user: User) => {
+  if (typeof window !== 'undefined') {
+    document.cookie = `hirehub_user_session=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=604800; SameSite=Lax`;
+  }
+};
+
+const removeSessionCookie = () => {
+  if (typeof window !== 'undefined') {
+    document.cookie = 'hirehub_user_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+  }
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -49,15 +61,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(savedUser);
         setUser(parsed);
         setRole(parsed.role);
+        setSessionCookie(parsed);
       } catch {
         setUser(DEFAULT_USER);
         setRole('CANDIDATE');
+        setSessionCookie(DEFAULT_USER);
       }
     } else {
       // Default to demo Candidate session
       setUser(DEFAULT_USER);
       setRole('CANDIDATE');
       localStorage.setItem('hirehub_user_session', JSON.stringify(DEFAULT_USER));
+      setSessionCookie(DEFAULT_USER);
     }
     setIsLoading(false);
   }, []);
@@ -80,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(loggedUser);
     setRole(targetRole);
     localStorage.setItem('hirehub_user_session', JSON.stringify(loggedUser));
+    setSessionCookie(loggedUser);
     setIsLoading(false);
   };
 
@@ -99,12 +115,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(newUser);
     setRole(targetRole);
     localStorage.setItem('hirehub_user_session', JSON.stringify(newUser));
+    setSessionCookie(newUser);
     setIsLoading(false);
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('hirehub_user_session');
+    removeSessionCookie();
     router.push('/');
   };
 
@@ -118,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(updated);
       localStorage.setItem('hirehub_user_session', JSON.stringify(updated));
+      setSessionCookie(updated);
     }
   };
 
