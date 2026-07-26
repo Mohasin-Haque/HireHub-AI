@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -30,21 +30,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole>('CANDIDATE');
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
+
+  // Stable ref — never recreated, never triggers re-renders or effect re-runs
+  const supabase = useRef(createClient()).current;
 
   const buildAuthUser = useCallback(async (supabaseUser: SupabaseUser): Promise<AuthUser> => {
     const meta = supabaseUser.user_metadata || {};
 
-    // Fetch role from DB. If the row is missing (trigger didn't fire),
-    // insert it on-the-fly so the user isn't silently demoted to CANDIDATE.
     let { data: dbUser } = await supabase
       .from('users')
       .select('role')
@@ -52,14 +50,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .single();
 
     if (!dbUser) {
-      // Row missing — insert it now (trigger may have been skipped for manually-created users)
       const metaRole = (meta.role as UserRole) || 'CANDIDATE';
-      await supabase.from('users').upsert({
+      // ignoreDuplicates: true — never overwrite an existing row's role
+      const { data: upserted } = await supabase.from('users').upsert({
         id: supabaseUser.id,
         email: supabaseUser.email || '',
         role: metaRole,
-      }, { onConflict: 'id' });
-      dbUser = { role: metaRole };
+      }, { onConflict: 'id', ignoreDuplicates: true }).select('role').single();
+      dbUser = upserted || { role: metaRole };
     }
 
     return {
@@ -82,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, buildAuthUser]);
 
   useEffect(() => {
+    // Initial session load
     supabase.auth.getSession().then(async ({ data: { session: s } }) => {
       setSession(s);
       if (s?.user) {
@@ -92,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     });
 
+    // Auth state changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
       if (s?.user) {
@@ -105,15 +105,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     });
 
-    // Re-fetch role on window focus to pick up any DB role changes
-    const handleFocus = () => { if (session) refreshUser(); };
+    // Re-fetch role on tab focus only when a session exists
+    const handleFocus = () => {
+      supabase.auth.getSession().then(({ data: { session: s } }) => {
+        if (s?.user) refreshUser();
+      });
+    };
     window.addEventListener('focus', handleFocus);
 
     return () => {
       subscription.unsubscribe();
       window.removeEventListener('focus', handleFocus);
     };
-  }, [supabase, buildAuthUser, refreshUser, session]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps — supabase is a stable ref, runs once on mount only
 
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
