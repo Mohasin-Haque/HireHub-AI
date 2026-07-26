@@ -19,7 +19,7 @@ export interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   session: Session | null;
-  role: UserRole;
+  role: UserRole | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ error?: string }>;
@@ -33,7 +33,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [role, setRole] = useState<UserRole>('CANDIDATE');
+  const [role, setRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .single();
 
     if (!dbUser) {
-      const metaRole = (meta.role as UserRole) || 'CANDIDATE';
+      const metaRole = meta.role as UserRole;
       // ignoreDuplicates: true — never overwrite an existing row's role
       const { data: upserted } = await supabase.from('users').upsert({
         id: supabaseUser.id,
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: supabaseUser.id,
       email: supabaseUser.email || '',
       fullName: meta.full_name || meta.fullName || supabaseUser.email?.split('@')[0] || 'User',
-      role: (dbUser.role as UserRole) || 'CANDIDATE',
+      role: dbUser.role as UserRole,
       avatarUrl: meta.avatar_url || meta.avatarUrl,
       companyName: meta.company_name || meta.companyName,
     };
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRole(authUser.role);
       } else {
         setUser(null);
-        setRole('CANDIDATE');
+        setRole(null);
       }
       setIsLoading(false);
     });
