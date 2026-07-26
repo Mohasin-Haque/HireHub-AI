@@ -15,10 +15,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20.x
+      - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: Install Dependencies
@@ -33,8 +33,8 @@ jobs:
       - name: Build Next.js Production App
         run: npm run build
         env:
-          NEXT_PUBLIC_SUPABASE_URL: "https://demo-hirehub-ai.supabase.co"
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: "demo-anon-key-hirehub-ai-2026"
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_APP_URL: "https://hirehub-ai.vercel.app"
 
   deploy-vercel:
