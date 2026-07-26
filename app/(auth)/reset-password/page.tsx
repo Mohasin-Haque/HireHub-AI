@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { resetPasswordSchema, ResetPasswordInput } from '@/lib/validations';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { KeyRound, ArrowLeft, CheckCircle2 } from 'lucide-react';
@@ -22,12 +23,31 @@ export default function ResetPasswordPage() {
     resolver: zodResolver(resetPasswordSchema),
   });
 
-  const onSubmit = async (_data: ResetPasswordInput) => {
+  const onSubmit = async (data: ResetPasswordInput) => {
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setIsLoading(false);
-    setIsSent(true);
-    toast.success('Password reset email sent!');
+    try {
+      const supabase = createClient();
+      const redirectTo =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/update-password`
+          : `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/update-password`;
+
+      const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
+        redirectTo,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      setIsSent(true);
+      toast.success('Password reset email sent!');
+    } catch {
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -70,7 +90,10 @@ export default function ResetPasswordPage() {
       )}
 
       <div className="pt-2 text-center">
-        <Link href="/login" className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-1">
+        <Link
+          href="/login"
+          className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-1"
+        >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Login
         </Link>

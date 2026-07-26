@@ -19,14 +19,19 @@ export const signupSchema = z.object({
     }
     return true;
   },
-  {
-    message: 'Company name is required for Employer account',
-    path: ['companyName'],
-  }
+  { message: 'Company name is required for Employer account', path: ['companyName'] }
 );
 
 export const resetPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
+});
+
+export const updatePasswordSchema = z.object({
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
 });
 
 export const jobPostSchema = z.object({
@@ -37,8 +42,8 @@ export const jobPostSchema = z.object({
   workplaceType: z.enum(['REMOTE', 'HYBRID', 'ONSITE']),
   jobType: z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERNSHIP']),
   experienceLevel: z.enum(['ENTRY', 'MID', 'SENIOR', 'LEAD', 'EXECUTIVE']),
-  salaryMin: z.number({ invalid_type_error: 'Must be a number' }).min(0, 'Salary cannot be negative'),
-  salaryMax: z.number({ invalid_type_error: 'Must be a number' }).min(0, 'Salary cannot be negative'),
+  salaryMin: z.number({ invalid_type_error: 'Must be a number' }).min(0),
+  salaryMax: z.number({ invalid_type_error: 'Must be a number' }).min(0),
   salaryCurrency: z.string().default('USD'),
   description: z.string().min(20, 'Job description must be at least 20 characters'),
   responsibilities: z.string().min(10, 'Key responsibilities are required'),
@@ -68,9 +73,43 @@ export const profileSchema = z.object({
   experienceYrs: z.number().min(0, 'Experience cannot be negative'),
 });
 
+export const workExperienceSchema = z.object({
+  company: z.string().min(1, 'Company is required'),
+  title: z.string().min(1, 'Job title is required'),
+  location: z.string().optional(),
+  startDate: z.string().min(1, 'Start date is required'),
+  endDate: z.string().optional(),
+  current: z.boolean().default(false),
+  description: z.string().optional(),
+});
+
+export const educationSchema = z.object({
+  institution: z.string().min(1, 'Institution is required'),
+  degree: z.string().min(1, 'Degree is required'),
+  field: z.string().optional(),
+  startYear: z.number().min(1900).max(2100),
+  endYear: z.number().min(1900).max(2100).optional(),
+  current: z.boolean().default(false),
+  gpa: z.string().optional(),
+});
+
+export const companySchema = z.object({
+  name: z.string().min(2, 'Company name is required'),
+  website: z.string().url().optional().or(z.literal('')),
+  description: z.string().optional(),
+  industry: z.string().optional(),
+  location: z.string().optional(),
+  size: z.string().optional(),
+  hiringStatus: z.boolean().default(true),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
 export type JobPostInput = z.infer<typeof jobPostSchema>;
 export type ApplyJobInput = z.infer<typeof applyJobSchema>;
 export type ProfileInput = z.infer<typeof profileSchema>;
+export type WorkExperienceInput = z.infer<typeof workExperienceSchema>;
+export type EducationInput = z.infer<typeof educationSchema>;
+export type CompanyInput = z.infer<typeof companySchema>;

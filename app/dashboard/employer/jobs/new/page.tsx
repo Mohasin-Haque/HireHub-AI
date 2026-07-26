@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { jobPostSchema, JobPostInput } from '@/lib/validations';
-import { HireHubStore } from '@/lib/db/store';
+import { createJob } from '@/lib/actions/employer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AIGeneratorModal } from '@/components/ai/AIGeneratorModal';
@@ -89,32 +89,15 @@ export default function NewJobPage() {
 
   const onSubmit = async (data: JobPostInput) => {
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 600));
-
-    HireHubStore.createJob({
-      companyId: `comp-${Date.now()}`,
-      companyName: data.companyName,
-      companyLogo: `https://avatar.vercel.sh/${encodeURIComponent(data.companyName)}`,
-      companyWebsite: data.companyWebsite || 'https://example.com',
-      title: data.title,
-      description: data.description,
-      responsibilities: data.responsibilities,
-      requirements: data.requirements,
-      benefits: data.benefits || 'Competitive salary & health insurance',
-      location: data.location,
-      workplaceType: data.workplaceType,
-      jobType: data.jobType,
-      salaryMin: data.salaryMin,
-      salaryMax: data.salaryMax,
-      salaryCurrency: data.salaryCurrency,
-      experienceLevel: data.experienceLevel,
-      tags: tags,
-      status: 'ACTIVE',
-    });
-
-    setIsSubmitting(false);
-    toast.success('Job position published successfully!');
-    router.push('/dashboard/employer');
+    try {
+      await createJob({ ...data, tags, status: 'ACTIVE' });
+      toast.success('Job position published successfully!');
+      router.push('/dashboard/employer');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to publish job');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

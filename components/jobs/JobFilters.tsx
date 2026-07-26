@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Filter, RotateCcw, MapPin, Briefcase, DollarSign, Layers } from 'lucide-react';
+import Image from 'next/image';
+import { useAuth } from '@/lib/auth-context';
+import { Filter, RotateCcw, MapPin, Briefcase, DollarSign, Layers, Bookmark, Zap, Building2 } from 'lucide-react';
 
 export interface FilterState {
   workplaceType: string;
@@ -15,9 +17,23 @@ interface JobFiltersProps {
   filters: FilterState;
   onChange: (newFilters: FilterState) => void;
   onReset: () => void;
+  onSave: () => void;
+  onQueryChange: (query: string) => void;
+  trendingSkills: string[];
+  trendingCompanies: any[];
 }
 
-export function JobFilters({ filters, onChange, onReset }: JobFiltersProps) {
+export function JobFilters({
+  filters,
+  onChange,
+  onReset,
+  onSave,
+  onQueryChange,
+  trendingSkills,
+  trendingCompanies,
+}: JobFiltersProps) {
+  const { isAuthenticated } = useAuth();
+
   const handleSelect = (key: keyof FilterState, value: string | number) => {
     onChange({ ...filters, [key]: value });
   };
@@ -29,43 +45,65 @@ export function JobFilters({ filters, onChange, onReset }: JobFiltersProps) {
           <Filter className="w-4 h-4 text-brand-500" />
           Filter Jobs
         </h3>
-        <button
-          onClick={onReset}
-          className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
-        >
-          <RotateCcw className="w-3 h-3" />
-          Reset All
-        </button>
+        <div className="flex items-center gap-2">
+          {isAuthenticated && (
+            <button onClick={onSave} className="text-xs font-semibold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1">
+              <Bookmark className="w-3 h-3" /> Save
+            </button>
+          )}
+          <button onClick={onReset} className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
+            <RotateCcw className="w-3 h-3" /> Reset
+          </button>
+        </div>
+      </div>
+
+      {/* Trending Skills */}
+      <div className="space-y-2.5">
+        <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+          <Zap className="w-3.5 h-3.5" /> Trending Skills
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {trendingSkills.map(skill => (
+            <button key={skill} onClick={() => onQueryChange(skill)} className="px-2 py-1 text-xs font-medium rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-300 hover:bg-purple-500/20">
+              {skill}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Trending Companies */}
+      <div className="space-y-2.5">
+        <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+          <Building2 className="w-3.5 h-3.5" /> Trending Companies
+        </label>
+        <div className="space-y-2">
+          {trendingCompanies.map(company => (
+            <button key={company.id} onClick={() => onQueryChange(company.name)} className="w-full flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+              <Image src={company.logo_url} alt={company.name} width={24} height={24} className="rounded-md" />
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{company.name}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Workplace Type */}
       <div className="space-y-2.5">
         <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-          <MapPin className="w-3.5 h-3.5" />
-          Workplace Model
+          <MapPin className="w-3.5 h-3.5" /> Workplace
         </label>
         <div className="grid grid-cols-2 gap-1.5">
-          {['ALL', 'REMOTE', 'HYBRID', 'ONSITE'].map((type) => (
-            <button
-              key={type}
-              onClick={() => handleSelect('workplaceType', type)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all text-center ${
-                filters.workplaceType === type
-                  ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
-                  : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
+          {['ALL', 'REMOTE', 'HYBRID', 'ONSITE'].map(type => (
+            <button key={type} onClick={() => handleSelect('workplaceType', type)} className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all text-center ${filters.workplaceType === type ? 'bg-brand-600 text-white border-brand-600 shadow-sm' : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
               {type}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Employment Type */}
-      <div className="space-y-2.5">
+       {/* Employment Type */}
+       <div className="space-y-2.5">
         <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-          <Briefcase className="w-3.5 h-3.5" />
-          Employment Type
+          <Briefcase className="w-3.5 h-3.5" /> Employment Type
         </label>
         <div className="space-y-1.5">
           {[
@@ -101,7 +139,7 @@ export function JobFilters({ filters, onChange, onReset }: JobFiltersProps) {
         <select
           value={filters.experienceLevel}
           onChange={(e) => handleSelect('experienceLevel', e.target.value)}
-          className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
         >
           <option value="ALL">All Experience Levels</option>
           <option value="ENTRY">Entry Level (0-2 yrs)</option>

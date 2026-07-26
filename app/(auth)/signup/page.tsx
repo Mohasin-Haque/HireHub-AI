@@ -37,16 +37,15 @@ export default function SignupPage() {
   const onSubmit = async (data: SignupInput) => {
     setIsLoading(true);
     try {
-      await signup(data.fullName, data.email, selectedRole, data.companyName);
-      toast.success('Account created successfully!');
-      if (selectedRole === 'EMPLOYER') {
-        router.push('/dashboard/employer');
-      } else {
-        router.push('/dashboard/candidate/profile');
+      const result = await signup(data.fullName, data.email, data.password, selectedRole, data.companyName);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
       }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Signup failed';
-      toast.error(message);
+      toast.success('Account created! Check your email to confirm.');
+      router.push('/login');
+    } catch (err: any) {
+      toast.error(err.message || 'Signup failed');
     } finally {
       setIsLoading(false);
     }
