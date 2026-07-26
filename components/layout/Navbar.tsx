@@ -7,10 +7,8 @@ import Image from 'next/image';
 import { useAuth } from '@/lib/auth-context';
 import { useTheme } from 'next-themes';
 import {
-  MessageSquare,
   Sparkles,
   UserCheck,
-  Building2,
   Moon,
   Sun,
   Menu,
@@ -31,7 +29,7 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
-  const isEmployer = role === 'EMPLOYER';
+  const isEmployer = user?.role === 'EMPLOYER';
   const isAdmin = user?.role === 'ADMIN';
 
   return (
@@ -160,7 +158,7 @@ export function Navbar() {
                   </div>
 
                   <Link
-                    href={isEmployer ? '/dashboard/employer' : '/dashboard/candidate'}
+                    href={isAdmin ? '/dashboard/admin' : isEmployer ? '/dashboard/employer' : '/dashboard/candidate'}
                     onClick={() => setProfileDropdownOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                   >

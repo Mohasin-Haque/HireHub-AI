@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, LoginInput } from '@/lib/validations';
 import { useAuth, UserRole } from '@/lib/auth-context';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sparkles, UserCheck, Building2, ArrowRight } from 'lucide-react';
@@ -23,6 +24,19 @@ export default function LoginPage() {
     defaultValues: { email: '', password: '', role: 'CANDIDATE' },
   });
 
+  const TEST_ACCOUNTS = [
+    { role: 'CANDIDATE' as UserRole, email: 'candidate@hirehub.test', label: 'Candidate', color: 'brand' },
+    { role: 'EMPLOYER' as UserRole, email: 'employer@hirehub.test', label: 'Employer', color: 'purple' },
+    { role: 'ADMIN' as UserRole, email: 'admin@hirehub.test', label: 'Admin', color: 'slate' },
+  ];
+
+  const fillTestAccount = (email: string, role: UserRole) => {
+    setValue('email', email);
+    setValue('password', 'Test@1234');
+    setValue('role', role === 'ADMIN' ? 'CANDIDATE' : role);
+    setSelectedRole(role === 'ADMIN' ? 'EMPLOYER' : role);
+  };
+
   const onSubmit = async (data: LoginInput) => {
     setIsLoading(true);
     try {
@@ -31,8 +45,19 @@ export default function LoginPage() {
         toast.error(result.error);
         return;
       }
+      // Fetch actual role from DB — never trust the UI toggle
+      const supabase = createClient();
+      const { data: { user: sbUser } } = await supabase.auth.getUser();
+      const { data: dbUser } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', sbUser!.id)
+        .single();
+      const actualRole = (dbUser?.role as UserRole) || 'CANDIDATE';
       toast.success('Logged in successfully!');
-      router.push(selectedRole === 'EMPLOYER' ? '/dashboard/employer' : '/dashboard/candidate');
+      if (actualRole === 'ADMIN') router.push('/dashboard/admin');
+      else if (actualRole === 'EMPLOYER') router.push('/dashboard/employer');
+      else router.push('/dashboard/candidate');
     } catch (err: any) {
       toast.error(err.message || 'Login failed');
     } finally {
@@ -80,9 +105,26 @@ export default function LoginPage() {
       </form>
 
       <p className="text-center text-xs text-slate-500 pt-2">
-        Don't have an account?{' '}
+        Don&apos;t have an account?{' '}
         <Link href="/signup" className="font-bold text-brand-600 dark:text-brand-400 hover:underline">Sign up now</Link>
       </p>
+
+      {/* Test Accounts */}
+      <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-2">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center">Test Accounts (password: Test@1234)</p>
+        <div className="grid grid-cols-3 gap-2">
+          {TEST_ACCOUNTS.map(({ role, email, label }) => (
+            <button
+              key={role}
+              type="button"
+              onClick={() => fillTestAccount(email, role)}
+              className="py-1.5 px-2 rounded-lg border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

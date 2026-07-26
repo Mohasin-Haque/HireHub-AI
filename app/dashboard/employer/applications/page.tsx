@@ -1,22 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getJobApplications, updateApplicationStatus } from '@/lib/actions/employer';
 import { formatDate } from '@/lib/utils';
 import { ScheduleInterviewModal } from '@/components/interviews/ScheduleInterviewModal';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Sparkles, ExternalLink, Mail, ArrowLeft, FileText, Calendar, Download, Search } from 'lucide-react';
+import { Sparkles, ExternalLink, ArrowLeft, FileText, Calendar, Download, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 const STATUS_OPTIONS = ['PENDING', 'REVIEWING', 'SHORTLISTED', 'INTERVIEWING', 'ACCEPTED', 'REJECTED'];
-
-const statusVariant: Record<string, any> = {
-  ACCEPTED: 'success', INTERVIEWING: 'brand', REVIEWING: 'ai',
-  SHORTLISTED: 'ai', PENDING: 'warning', REJECTED: 'danger',
-};
 
 export default function EmployerApplicationsPage() {
   const [applications, setApplications] = useState<any[]>([]);
@@ -24,13 +18,14 @@ export default function EmployerApplicationsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [scheduleModal, setScheduleModal] = useState<any>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(true);
 
   const load = () => {
-    startTransition(async () => {
-      const data = await getJobApplications();
+    setIsLoading(true);
+    getJobApplications().then((data) => {
       setApplications(data);
       setFiltered(data);
+      setIsLoading(false);
     });
   };
 
@@ -123,7 +118,7 @@ export default function EmployerApplicationsPage() {
         </div>
 
         <div className="space-y-4">
-          {isPending ? (
+          {isLoading ? (
             <div className="text-center py-8 text-sm text-slate-400">Loading...</div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-12 text-sm text-slate-400">No applications found</div>

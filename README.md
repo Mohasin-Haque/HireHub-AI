@@ -4,33 +4,64 @@
 [![React 19](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
-[![Prisma](https://img.shields.io/badge/Prisma-6.3-2D3748?style=flat-square&logo=prisma)](https://www.prisma.io/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com/)
 [![Vitest](https://img.shields.io/badge/Vitest-3.0-6E9F18?style=flat-square&logo=vitest)](https://vitest.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
 
-**HireHub AI** is a production-grade, full-stack AI-assisted job discovery and candidate recruitment platform. Designed with modern SaaS aesthetics (Linear / Stripe / Vercel style), it solves key talent acquisition bottlenecks by automating job description creation, candidate match scoring, title optimization, and interview preparation using an OpenAI-compatible modular AI engine.
+**HireHub AI** is a production-grade, full-stack AI-assisted job discovery and candidate recruitment platform. Built with a modern SaaS aesthetic (Linear / Stripe / Vercel style), it automates job description creation, candidate match scoring, title optimization, and interview preparation using an OpenAI-compatible modular AI engine with a smart local fallback.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Features
 
 ### 🏢 Employer Portal
-- **AI Job Description Generator**: Generate structured job specifications with key responsibilities, qualifications, and benefits in seconds.
-- **AI Title Improver & Skill Suggester**: Optimize job titles to boost qualified applicant click-through rates by up to 45%.
-- **Recruiter Analytics Dashboard**: Live metrics cards tracking Active Jobs, Applicant Pipelines, Impressions, and AI Match Fit.
-- **Job CRUD Operations**: Create, edit, publish, close, or delete job postings with real-time state updates.
-- **Candidate Applications Pipeline**: Review applicant cover letters, resumes, AI match scores, and transition statuses (`PENDING` ➔ `REVIEWING` ➔ `INTERVIEWING` ➔ `ACCEPTED` ➔ `REJECTED`).
+- **AI Job Description Generator** — Generate structured job specs with responsibilities, qualifications, and benefits in seconds via `AIGeneratorModal`
+- **AI Title Improver & Skill Suggester** — Optimize job titles to boost qualified applicant click-through rates
+- **Recruiter Analytics Dashboard** — Live metrics: Active Jobs, Applicant Pipelines, Impressions, Weekly Trend charts
+- **Full Job CRUD** — Create, edit, publish, close, duplicate, or delete job postings with real-time state updates
+- **Applications Pipeline** — Review applicant cover letters, resumes, AI match scores; update status (`PENDING` → `REVIEWING` → `SHORTLISTED` → `INTERVIEWING` → `ACCEPTED` → `REJECTED`); export CSV
+- **Interview Scheduling** — Schedule, reschedule, and cancel interviews via `ScheduleInterviewModal`; meeting links, duration, type
+- **Company Profile** — Logo upload, description, industry, tech stack, benefits, social links
+- **AI History Panel** — View and regenerate past AI generations per action type
 
 ### 👨‍💻 Candidate Portal
-- **AI-Powered Job Discovery**: Full-text instant search with multi-faceted filtering (Location, Workplace model, Employment type, Seniority level, Minimum salary slider).
-- **Interactive AI Interview Prep**: Generate role-specific technical, architectural, and behavioral interview questions with evaluation criteria.
-- **One-Click Application & Bookmarks**: Save positions and submit applications with pre-calculated candidate match alignment.
-- **Profile & Resume Builder**: Showcase skills taxonomy, bio, GitHub/LinkedIn links, and resume documents.
+- **AI-Powered Job Discovery** — Full-text search with multi-faceted filtering: Location, Workplace model, Employment type, Seniority level, Minimum salary slider
+- **Recently Viewed Jobs** — Automatically tracked and displayed on the candidate dashboard
+- **AI Interview Prep** — Generate role-specific technical, architectural, and behavioral interview questions with evaluation criteria
+- **AI Cover Letter Generator** — One-click AI-generated cover letters tailored to the job description
+- **ATS Score Analyzer** — AI-powered resume-to-job match scoring with improvement suggestions
+- **One-Click Apply & Bookmarks** — Save positions and submit applications with pre-calculated match alignment
+- **Profile & Resume Builder** — Skills taxonomy, bio, GitHub/LinkedIn links, portfolio links (add/remove), avatar upload
+- **Resume Versions** — Upload multiple resume versions, set active version, track history
+- **Work Experience & Education** — Full CRUD for work history and education entries
+- **Interview Tracker** — View scheduled interviews, reschedule or cancel with modal
+- **Saved Searches** — Save and reapply job search filters
+- **Application Tracker** — Track all applications with status timeline
 
-### 🎨 Modern SaaS UI & Design
-- **Theme Support**: Seamless Dark Mode & Light Mode with custom color tokens.
-- **Glassmorphic Aesthetics**: Modern floating glass cards, subtle micro-animations (Framer Motion), and responsive layout across Mobile, Tablet, and Desktop.
-- **Validation & Feedback**: Form validation powered by **Zod** & **React Hook Form** with rich **Sonner** toast notifications.
+### 🛡️ Admin Panel
+- **Overview Dashboard** — Platform-wide stats: total users, companies, jobs, AI generations; breakdown by role, job status, application status
+- **User Management** — Search users, view profiles, change roles (CANDIDATE / EMPLOYER / ADMIN)
+- **Job Moderation** — View all jobs, activate or close any posting
+- **Company Moderation** — View all registered companies with industry and hiring status
+- **Review Moderation** — View all company reviews with ratings
+- **Platform Analytics** — 6-month growth line chart (users, jobs, companies) + AI usage breakdown by action type
+- **Feature Flags** — Toggle platform features live without redeployment
+- **Audit Logs** — Immutable activity log of all platform actions
+
+### 💬 Messaging
+- **Real-time Conversations** — Supabase Realtime-powered chat between candidates and employers
+- **Typing Indicators & Online Badges** — Live presence indicators
+- **Attachment Support** — File and image attachments in messages
+
+### 🔔 Notifications
+- **Real-time Notification Center** — In-app notifications for application updates, interview scheduling, messages, and system events
+- **Mark as Read / Delete** — Full notification management
+
+### 🎨 UI & Design
+- **Dark Mode & Light Mode** — Seamless theme switching with custom color tokens via `next-themes`
+- **Glassmorphic Aesthetics** — Floating glass cards, micro-animations (Framer Motion), responsive across Mobile, Tablet, Desktop
+- **Form Validation** — Zod + React Hook Form with rich Sonner toast notifications
+- **Skeleton Loading States** — All data-loading states show skeleton placeholders
 
 ---
 
@@ -38,190 +69,166 @@
 
 | Domain | Technology |
 | :--- | :--- |
-| **Framework** | Next.js 15 (App Router with React 19) |
-| **Language** | TypeScript (Strict Mode) |
-| **Styling & UI** | Tailwind CSS, Framer Motion, Lucide Icons, Glassmorphism CSS |
-| **Database & ORM** | Prisma ORM & Supabase PostgreSQL |
-| **Authentication** | Supabase Auth (RBAC: `EMPLOYER` \| `CANDIDATE`) |
+| **Framework** | Next.js 15 (App Router, React 19) |
+| **Language** | TypeScript 5.7 (Strict Mode) |
+| **Styling** | Tailwind CSS, Framer Motion, Lucide Icons, Glassmorphism |
+| **Database** | Supabase PostgreSQL |
+| **ORM / Schema** | Prisma Schema (reference) + Supabase client |
+| **Authentication** | Supabase Auth (RBAC: `EMPLOYER` \| `CANDIDATE` \| `ADMIN`) |
 | **Validation** | Zod + React Hook Form |
-| **AI Integration** | OpenAI API Abstraction (with smart local AI engine fallback) |
-| **Testing** | Vitest + React Testing Library |
-| **CI/CD** | GitHub Actions Workflow |
-| **Deployment** | Vercel Deployment Configuration |
+| **AI Integration** | OpenAI API with smart local fallback engine |
+| **Real-time** | Supabase Realtime (messages, notifications) |
+| **File Storage** | Supabase Storage (avatars, resumes, company logos) |
+| **Testing** | Vitest + React Testing Library (98 tests) |
+| **CI/CD** | GitHub Actions (lint → test → build → deploy) |
+| **Deployment** | Vercel |
 
 ---
 
-## 📁 Scalable Project Structure
+## 📁 Project Structure
 
 ```
 HireHubAI/
-├── .github/
-│   └── workflows/
-│       └── ci-cd.yml          # Automated lint, test, build & deploy workflow
+├── .github/workflows/ci-cd.yml       # Lint, test, build & deploy pipeline
 ├── app/
-│   ├── (auth)/                 # Protected auth routes (login, signup, reset-password)
-│   ├── api/                    # REST API route handlers
-│   │   ├── ai/                # OpenAI API routes (generate-description, improve-title, etc.)
-│   │   ├── jobs/              # Jobs CRUD API endpoints
-│   │   ├── applications/      # Candidate applications API
-│   │   └── bookmarks/         # Saved jobs API
+│   ├── (auth)/                        # login, signup, reset-password, update-password
+│   ├── api/                           # REST API route handlers
+│   │   ├── ai/                        # generate-description, improve-title, cover-letter, ats-score
+│   │   ├── jobs/                      # Jobs CRUD
+│   │   ├── applications/              # Application management
+│   │   ├── interviews/                # Interview scheduling
+│   │   ├── bookmarks/                 # Saved jobs
+│   │   ├── notifications/             # Notification management
+│   │   ├── resume/                    # Resume parsing
+│   │   └── search/                    # Autocomplete search
 │   ├── dashboard/
-│   │   ├── candidate/         # Candidate hub, saved jobs, applications, profile
-│   │   └── employer/          # Employer dashboard, job generator, application pipeline
-│   ├── jobs/                  # Public job search board & detailed view
-│   ├── globals.css            # Global theme variables & glassmorphism utilities
-│   ├── layout.tsx             # Root layout with ThemeProvider, AuthProvider, Navbar, Footer
-│   └── page.tsx               # Landing page with Hero, Stats, Features, Testimonials
+│   │   ├── admin/                     # Admin panel (users, jobs, analytics, flags)
+│   │   ├── candidate/                 # Hub, saved, applications, interviews, profile
+│   │   ├── employer/                  # Dashboard, jobs, applications pipeline, interviews
+│   │   ├── messages/                  # Real-time messaging
+│   │   └── settings/                  # Account settings
+│   ├── jobs/                          # Public job board & detail view
+│   ├── companies/[id]/                # Public company profile pages
+│   └── page.tsx                       # Landing page
 ├── components/
-│   ├── ai/                    # AIGeneratorModal & AI Copilot assistants
-│   ├── dashboard/             # Recruiter & Candidate dashboard widgets
-│   ├── jobs/                  # JobCard, JobFilters, ApplyModal
-│   ├── landing/               # HeroSection, StatsSection, FeatureCards, Testimonials
-│   ├── layout/                # Navbar, Footer, ThemeProvider
-│   └── ui/                    # Button, Card, Input, Badge, Dialog, Tabs, Skeleton
+│   ├── ai/                            # AIGeneratorModal, AIHistoryPanel, CoverLetterModal
+│   ├── analytics/                     # HiringCharts, GrowthLineChart
+│   ├── chat/                          # ConversationList, MessageBubble, MessageComposer
+│   ├── dashboard/                     # ActivityFeed, ATSScore, InterviewTimeline, ResumeUpload
+│   ├── interviews/                    # ScheduleInterviewModal
+│   ├── jobs/                          # JobCard, JobFilters, ApplyModal, JobDetailClient
+│   ├── landing/                       # Hero, Stats, Features, Testimonials, CTA
+│   ├── layout/                        # Navbar, Footer, ThemeProvider
+│   ├── notifications/                 # NotificationCenter
+│   └── ui/                            # Button, Card, Input, Badge, Dialog, Tabs, Skeleton
 ├── lib/
-│   ├── ai/                    # AIService abstraction layer & fallback engine
-│   ├── db/                    # Prisma client, mock data seed, local reactive store
-│   ├── supabase/              # Supabase browser & server clients
-│   ├── validations/           # Zod schemas for forms, jobs, profiles
-│   ├── auth-context.tsx       # Auth provider & instant Role Switcher
-│   └── utils.ts               # Currency formatting, date helpers, cn utility
-├── prisma/
-│   └── schema.prisma          # PostgreSQL schema (User, Profile, Company, Job, Application)
-├── tests/                     # Vitest unit test suite
-├── .env.example               # Environment variables template
-├── next.config.mjs            # Next.js configuration
-├── tailwind.config.js         # Tailwind configuration
-├── vercel.json                # Vercel deployment settings
-├── vitest.config.ts           # Vitest configuration
-└── package.json
+│   ├── actions/                       # Server Actions (admin, ai, analytics, candidate, employer...)
+│   ├── ai/ai-service.ts               # AIService abstraction + local fallback engine
+│   ├── supabase/                      # Browser & server Supabase clients
+│   ├── validations/                   # Zod schemas (login, signup, job, profile)
+│   ├── auth-context.tsx               # Auth provider with DB role resolution & self-heal
+│   └── utils.ts                       # Formatting helpers, cn utility
+├── supabase/migrations/               # 007 versioned SQL migrations
+├── tests/                             # 98 Vitest unit tests
+├── prisma/schema.prisma               # PostgreSQL schema reference
+└── middleware.ts                      # RBAC route protection
 ```
 
 ---
 
-## 🗄️ Database Schema (Prisma)
+## 🗄️ Database Schema
 
-The application includes a clean relational database schema supporting PostgreSQL / Supabase:
+Key tables: `users`, `profiles`, `companies`, `jobs`, `applications`, `interviews`, `bookmarks`, `notifications`, `messages`, `conversations`, `ai_history`, `activity_logs`, `resume_versions`, `work_experiences`, `educations`, `saved_searches`, `feature_flags`
 
-```prisma
-enum UserRole {
-  EMPLOYER
-  CANDIDATE
-  ADMIN
-}
-
-model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  role          UserRole       @default(CANDIDATE)
-  createdAt     DateTime       @default(now())
-  profile       Profile?
-  company       Company?
-  applications  Application[]
-  bookmarks     Bookmark[]
-}
-
-model Job {
-  id              String          @id @default(uuid())
-  companyId       String
-  title           String
-  description     String
-  responsibilities String?
-  requirements    String?
-  benefits        String?
-  location        String
-  workplaceType   WorkplaceType   @default(REMOTE)
-  jobType         JobType         @default(FULL_TIME)
-  salaryMin       Int?
-  salaryMax       Int?
-  experienceLevel ExperienceLevel @default(MID)
-  tags            String[]
-  status          JobStatus       @default(ACTIVE)
-  viewsCount      Int             @default(0)
-  createdAt       DateTime        @default(now())
-}
-```
+Full schema in `supabase/migrations/001_initial_schema.sql`. RLS policies across all 7 migrations enforce least-privilege access per role.
 
 ---
 
-## ⚡ Quick Start & Running Locally
+## ⚡ Quick Start
 
-### 1. Clone the repository
+### 1. Clone & install
 ```bash
 git clone https://github.com/your-username/HireHubAI.git
 cd HireHubAI
-```
-
-### 2. Install dependencies
-```bash
 npm install
 ```
 
-### 3. Setup environment variables
-Copy `.env.example` to `.env.local`:
+### 2. Environment variables
 ```bash
 cp .env.example .env.local
 ```
+Fill in:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+OPENAI_API_KEY=your_openai_key   # optional — local AI fallback works without it
+```
 
-> **Note**: The app works out of the box with built-in smart AI fallback engine and mock persistence if external keys are not provided immediately.
+### 3. Database setup
+Run migrations in order in **Supabase SQL Editor**:
+```
+supabase/migrations/001_initial_schema.sql
+supabase/migrations/002_fix_rls_and_auth_sync.sql
+supabase/migrations/003_schema_fixes.sql
+supabase/migrations/004_secure_rls_policies.sql
+supabase/migrations/005_test_accounts.sql
+supabase/migrations/006_fix_profile_upsert_and_storage_rls.sql
+supabase/migrations/007_fix_user_roles.sql
+```
 
-### 4. Run the development server
+### 4. Create test users in Supabase Dashboard
+Go to **Authentication → Users → Add user** (auto-confirm email) and create:
+
+| Email | Password | Role |
+|---|---|---|
+| `candidate@hirehub.test` | `Test@1234` | CANDIDATE |
+| `employer@hirehub.test` | `Test@1234` | EMPLOYER |
+| `admin@hirehub.test` | `Test@1234` | ADMIN |
+
+Then run `005_test_accounts.sql` and `007_fix_user_roles.sql` to seed profile data and set roles.
+
+### 5. Run
 ```bash
 npm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
 ## 🧪 Testing
 
-Run the Vitest test suite:
 ```bash
 npm run test
 ```
 
-Runs unit tests validating:
-- `AIService` methods (Job descriptions, Title improver, Skills, Interview questions).
-- Zod validation schemas (`loginSchema`, `signupSchema`, `jobPostSchema`).
+98 unit tests covering:
+- `AIService` methods (description, title, skills, interview questions, cover letter, ATS score)
+- Zod validation schemas (login, signup, job post, profile)
+- Server action logic (jobs, applications, notifications, interviews)
+- Utility functions
 
 ---
 
-## 🔄 CI/CD Pipeline & Vercel Deployment
+## 🔄 CI/CD
 
-### GitHub Actions Pipeline
-The included `.github/workflows/ci-cd.yml` workflow automatically runs on every push:
-1. Installs Node.js & dependencies.
-2. Runs ESLint checks (`npm run lint`).
-3. Executes unit test suite (`npm run test`).
-4. Builds the production bundle (`npm run build`).
-5. Deploys automatically to Vercel upon successful build.
-
-### Manual Vercel Deployment
-```bash
-npx vercel
-```
+GitHub Actions workflow (`.github/workflows/ci-cd.yml`) runs on every push:
+1. Install dependencies
+2. ESLint check
+3. Vitest test suite
+4. Production build
+5. Auto-deploy to Vercel
 
 ---
 
-## 📝 Recommended Git Commit History
+## 🔐 Security
 
-When committing your initial submission, we recommend structured commits like:
-
-1. `feat(setup): initial Next.js 15 project scaffold, Tailwind setup & root layout`
-2. `feat(auth): add Supabase authentication context, role switcher & Zod auth forms`
-3. `feat(database): define Prisma schema models for User, Company, Job, and Application`
-4. `feat(ai): build modular AI service layer & Next.js API route handlers`
-5. `feat(landing): build modern SaaS hero section, live stats & testimonials`
-6. `feat(jobs): build job search, multi-faceted filtering, pagination & detail view`
-7. `feat(employer): build recruiter dashboard, AI job generator & applicant pipeline`
-8. `feat(candidate): build candidate dashboard, saved jobs & profile editor`
-9. `test(vitest): add unit test coverage for AI service & Zod validations`
-10. `ci(github-actions): add GitHub Actions workflow & Vercel deployment config`
-11. `docs: add production README and setup documentation`
+- **RBAC via Supabase RLS** — Every table has row-level security policies. Candidates can only access their own data; employers only see their company's jobs and applications; admins have elevated read access.
+- **Role from DB only** — `auth-context.tsx` always fetches role from `public.users`, never trusts `user_metadata`
+- **Storage policies** — Separate RLS on `storage.objects` per bucket (resumes, avatars, company-logos)
+- **Server Actions** — All mutations go through authenticated server actions, never exposed as public API endpoints
 
 ---
 
-## 📄 License
+## 📝 License
 
 Distributed under the MIT License. See `LICENSE` for details.

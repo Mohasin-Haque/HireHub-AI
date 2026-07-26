@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import * as pdfParse from 'pdf-parse';
 import { extractResumeDataWithHistory } from '@/lib/actions/ai';
 import { upsertProfile, addWorkExperience, addEducation } from '@/lib/actions/candidate';
-
-const pdf = (pdfParse as any).default ?? pdfParse;
+import { AIService } from '@/lib/ai/ai-service';
 
 async function apiError(message: string, status: number) {
   return new NextResponse(JSON.stringify({ error: message }), { status, headers: { 'Content-Type': 'application/json' } });
@@ -23,8 +21,10 @@ export async function POST(req: NextRequest) {
       return apiError('No resume file provided.', 400);
     }
 
-    const fileBuffer = await file.arrayBuffer();
-    const pdfData = await pdf(fileBuffer);
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParse = require('pdf-parse');
+    const pdfData = await pdfParse(fileBuffer);
     const resumeText = pdfData.text;
 
     if (!resumeText) {
@@ -34,24 +34,74 @@ export async function POST(req: NextRequest) {
     const extractedData: any = await extractResumeDataWithHistory(resumeText);
 
     if (extractedData.profile) {
-      await upsertProfile(extractedData.profile);
+      const p = extractedData.profile;
+      const firstJobTitle = extractedData.workExperiences?.[0]?.title;
+      const skillList: string[] = Array.isArray(p.skills) && p.skills.length > 0 ? p.skills : ['General'];
+      const str = (v: unknown) => (v && typeof v === 'string' && v.trim() !== '' ? v.trim() : undefined);
+      const url = (v: unknown) => { const s = str(v); if (!s) return undefined; try { new URL(s.startsWith('http') ? s : `https://${s}`); return s.startsWith('http') ? s : `https://${s}`; } catch { return undefined; } };
+      await upsertProfile({
+        fullName:      p.fullName      || 'Unknown',
+        headline:      p.headline      || firstJobTitle || 'Professional',
+        bio:           p.bio           || p.summary     || `Experienced professional skilled in ${skillList.slice(0, 3).join(', ')}.`,
+        phone:         str(p.phone),
+        location:      p.location      || 'Not specified',
+        resumeUrl:     url(p.resumeUrl),
+        website:       url(p.website),
+        githubUrl:     url(p.githubUrl),
+        linkedinUrl:   url(p.linkedinUrl),
+        skills:        skillList,
+        experienceYrs: typeof p.experienceYrs === 'number' ? p.experienceYrs : 0,
+      });
     }
 
-    if (extractedData.workExperiences && Array.isArray(extractedData.workExperiences)) {
+    if (Array.isArray(extractedData.workExperiences)) {
       for (const exp of extractedData.workExperiences) {
-        await addWorkExperience(exp);
+        if (!exp.company || !exp.title || !exp.startDate) continue;
+        await addWorkExperience({
+          company:     exp.company,
+          title:       exp.title,
+          location:    exp.location   || undefined,
+          startDate:   exp.startDate,
+          endDate:     exp.endDate    || undefined,
+          current:     exp.current    ?? false,
+          description: exp.description || undefined,
+        });
       }
     }
 
-    if (extractedData.educations && Array.isArray(extractedData.educations)) {
+    if (Array.isArray(extractedData.educations)) {
       for (const edu of extractedData.educations) {
-        await addEducation(edu);
+        if (!edu.institution || !edu.degree || !edu.startYear) continue;
+        await addEducation({
+          institution: edu.institution,
+          degree:      edu.degree,
+          field:       edu.field      || undefined,
+          startYear:   edu.startYear,
+          endYear:     edu.endYear    || undefined,
+          current:     edu.current    ?? false,
+          gpa:         edu.gpa        || undefined,
+        });
       }
+    }
+
+    // Calculate ATS score from resume text and save to profile
+    let atsScore: number | null = null;
+    try {
+      const atsResult: any = await AIService.calculateATSScore(resumeText, '');
+      if (typeof atsResult?.score === 'number') {
+        atsScore = atsResult.score;
+        await supabase
+          .from('profiles')
+          .update({ ats_score: atsScore })
+          .eq('user_id', user.id);
+      }
+    } catch {
+      // Non-critical — don't fail the whole request
     }
 
     return NextResponse.json({
       message: 'Resume parsed and profile updated successfully!',
-      data: extractedData,
+      data: { ...extractedData, atsScore },
     });
 
   } catch (error) {

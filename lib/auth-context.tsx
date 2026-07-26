@@ -42,17 +42,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const buildAuthUser = useCallback(async (supabaseUser: SupabaseUser): Promise<AuthUser> => {
     const meta = supabaseUser.user_metadata || {};
-    // Always fetch role from the database — never trust user_metadata for authorization
-    const { data: dbUser } = await supabase
+
+    // Fetch role from DB. If the row is missing (trigger didn't fire),
+    // insert it on-the-fly so the user isn't silently demoted to CANDIDATE.
+    let { data: dbUser } = await supabase
       .from('users')
       .select('role')
       .eq('id', supabaseUser.id)
       .single();
+
+    if (!dbUser) {
+      // Row missing — insert it now (trigger may have been skipped for manually-created users)
+      const metaRole = (meta.role as UserRole) || 'CANDIDATE';
+      await supabase.from('users').upsert({
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        role: metaRole,
+      }, { onConflict: 'id' });
+      dbUser = { role: metaRole };
+    }
+
     return {
       id: supabaseUser.id,
       email: supabaseUser.email || '',
       fullName: meta.full_name || meta.fullName || supabaseUser.email?.split('@')[0] || 'User',
-      role: (dbUser?.role as UserRole) || 'CANDIDATE',
+      role: (dbUser.role as UserRole) || 'CANDIDATE',
       avatarUrl: meta.avatar_url || meta.avatarUrl,
       companyName: meta.company_name || meta.companyName,
     };

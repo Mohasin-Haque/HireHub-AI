@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth-context';
-import { getEmployerJobs, deleteJob, updateJob, getEmployerAnalytics } from '@/lib/actions/employer';
+import { getEmployerJobs, deleteJob, updateJob, duplicateJob, getEmployerAnalytics } from '@/lib/actions/employer';
 import { getActivityFeed } from '@/lib/actions/shared';
 import { formatSalary } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -12,38 +11,43 @@ import { WeeklyTrendChart, HiringFunnelChart } from '@/components/analytics/Hiri
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import {
   Briefcase, Users, Eye, PlusCircle, Sparkles, Trash2,
-  TrendingUp, FileText, Building2, Copy, Archive, BarChart2,
+  TrendingUp, FileText, Building2, BarChart2, Copy,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function EmployerDashboard() {
-  const { user } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
   const [activityFeed, setActivityFeed] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState('ACTIVE');
-  const [isPending, startTransition] = useTransition();
 
-  const load = () => {
-    startTransition(async () => {
-      const [j, a, feed] = await Promise.all([
-        getEmployerJobs(statusFilter),
-        getEmployerAnalytics(),
-        getActivityFeed(8),
-      ]);
+  const load = useCallback(() => {
+    Promise.all([
+      getEmployerJobs(statusFilter).catch(() => []),
+      getEmployerAnalytics().catch(() => null),
+      getActivityFeed(8).catch(() => []),
+    ]).then(([j, a, feed]) => {
       setJobs(j);
       setAnalytics(a);
       setActivityFeed(feed);
     });
-  };
+  }, [statusFilter]);
 
-  useEffect(() => { load(); }, [statusFilter]);
+  useEffect(() => { load(); }, [load]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this job listing?')) return;
     try {
       await deleteJob(id);
       toast.success('Job deleted');
+      load();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleDuplicate = async (id: string) => {
+    try {
+      await duplicateJob(id);
+      toast.success('Job duplicated as draft');
       load();
     } catch (err: any) { toast.error(err.message); }
   };
@@ -139,7 +143,7 @@ export default function EmployerDashboard() {
             </div>
 
             <div className="space-y-3">
-              {isPending ? (
+              {jobs.length === 0 && !analytics ? (
                 <div className="text-center py-8 text-sm text-slate-400">Loading...</div>
               ) : jobs.length === 0 ? (
                 <div className="text-center py-8 space-y-2">
@@ -176,9 +180,15 @@ export default function EmployerDashboard() {
                       >
                         {job.status === 'ACTIVE' ? 'Close' : 'Activate'}
                       </button>
+                      <Link href={`/dashboard/employer/jobs/${job.id}`}>
+                        <Button variant="outline" size="sm">Edit</Button>
+                      </Link>
                       <Link href={`/jobs/${job.id}`}>
                         <Button variant="outline" size="sm">View</Button>
                       </Link>
+                      <button onClick={() => handleDuplicate(job.id)} className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" title="Duplicate as draft">
+                        <Copy className="w-4 h-4" />
+                      </button>
                       <button onClick={() => handleDelete(job.id)} className="p-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30">
                         <Trash2 className="w-4 h-4" />
                       </button>

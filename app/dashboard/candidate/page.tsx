@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth-context';
-import { getCandidateApplications, getBookmarkedJobs } from '@/lib/actions/candidate';
+import { getCandidateApplications, getBookmarkedJobs, getRecentlyViewedJobs } from '@/lib/actions/candidate';
 import { getActivityFeed } from '@/lib/actions/shared';
 import { getProfile } from '@/lib/actions/candidate';
 import { formatDate } from '@/lib/utils';
@@ -15,7 +15,7 @@ import { ATSScore } from '@/components/dashboard/ATSScore';
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
 import {
   Bookmark, Send, Sparkles, Clock, Briefcase, Edit,
-  Calendar, TrendingUp, FileText, Bell,
+  Calendar, Bell,
 } from 'lucide-react';
 
 export default function CandidateDashboard() {
@@ -24,20 +24,21 @@ export default function CandidateDashboard() {
   const [applications, setApplications] = useState<any[]>([]);
   const [savedJobs, setSavedJobs] = useState<any[]>([]);
   const [activityFeed, setActivityFeed] = useState<any[]>([]);
-  const [isPending, startTransition] = useTransition();
+  const [recentJobs, setRecentJobs] = useState<any[]>([]);
 
   useEffect(() => {
-    startTransition(async () => {
-      const [prof, apps, saved, feed] = await Promise.all([
-        getProfile(),
-        getCandidateApplications(),
-        getBookmarkedJobs(),
-        getActivityFeed(10),
-      ]);
+    Promise.all([
+      getProfile().catch(() => null),
+      getCandidateApplications().catch(() => []),
+      getBookmarkedJobs().catch(() => []),
+      getActivityFeed(10).catch(() => []),
+      getRecentlyViewedJobs(6).catch(() => []),
+    ]).then(([prof, apps, saved, feed, recent]) => {
       setProfile(prof);
       setApplications(apps);
       setSavedJobs(saved);
       setActivityFeed(feed);
+      setRecentJobs(recent);
     });
   }, []);
 
@@ -192,6 +193,35 @@ export default function CandidateDashboard() {
               </div>
             )}
           </div>
+
+          {/* Recently Viewed */}
+          {recentJobs.length > 0 && (
+            <div className="p-6 rounded-3xl glass-panel space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                <h3 className="font-extrabold text-lg text-slate-900 dark:text-white">Recently Viewed</h3>
+                <Link href="/jobs" className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:underline">Browse all</Link>
+              </div>
+              <div className="space-y-2">
+                {recentJobs.map((job: any) => (
+                  <Link
+                    key={job.id}
+                    href={`/jobs/${job.id}`}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 overflow-hidden">
+                      {job.companies?.logo_url
+                        ? <Image src={job.companies.logo_url} alt={job.companies.name} width={32} height={32} className="object-cover" />
+                        : <Briefcase className="w-4 h-4 text-slate-400" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-brand-600">{job.title}</p>
+                      <p className="text-[10px] text-slate-400 truncate">{job.companies?.name} · {job.location}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right column */}

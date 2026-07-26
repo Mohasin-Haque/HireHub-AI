@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { uploadResume } from '@/lib/actions/upload';
 import { FileText, CheckCircle, AlertCircle, Loader2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';

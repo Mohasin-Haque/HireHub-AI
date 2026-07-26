@@ -35,7 +35,7 @@ export function CompanyReviews({ companyId, reviews }: { companyId: string, revi
         setBody('');
         // Note: The page needs to be revalidated or re-fetched to show the new review.
         // This is handled by revalidatePath in the server action.
-      } catch (err) {
+      } catch {
         toast.error('Failed to submit review.');
       }
     });

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect, useTransition, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useForm } from 'react-hook-form';
@@ -26,8 +26,10 @@ export default function CandidateProfilePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [skillInput, setSkillInput] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
+  const [portfolioInput, setPortfolioInput] = useState('');
+  const [portfolioLinks, setPortfolioLinks] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'profile' | 'resume' | 'experience' | 'education'>('profile');
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   // Work experience form state
   const [showExpForm, setShowExpForm] = useState(false);
@@ -41,12 +43,13 @@ export default function CandidateProfilePage() {
     resolver: zodResolver(profileSchema),
   });
 
-  const loadProfile = () => {
+  const loadProfile = useCallback(() => {
     startTransition(async () => {
       const [prof, versions] = await Promise.all([getProfile(), getResumeVersions()]);
       if (prof) {
         setProfile(prof);
         setSkills(prof.skills || []);
+        setPortfolioLinks(prof.portfolio_links || []);
         setValue('fullName', prof.full_name || '');
         setValue('headline', prof.headline || '');
         setValue('bio', prof.bio || '');
@@ -61,9 +64,9 @@ export default function CandidateProfilePage() {
       }
       setResumeVersions(versions);
     });
-  };
+  }, [startTransition, setValue]);
 
-  useEffect(() => { loadProfile(); }, []);
+  useEffect(() => { loadProfile(); }, [loadProfile]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,11 +85,19 @@ export default function CandidateProfilePage() {
   const onSubmit = async (data: ProfileInput) => {
     setIsSaving(true);
     try {
-      await upsertProfile({ ...data, skills });
+      await upsertProfile({ ...data, skills, portfolioLinks });
       toast.success('Profile saved!');
       loadProfile();
     } catch (err: any) { toast.error(err.message); }
     finally { setIsSaving(false); }
+  };
+
+  const handleAddPortfolio = () => {
+    const url = portfolioInput.trim();
+    if (url && !portfolioLinks.includes(url)) {
+      setPortfolioLinks((prev) => [...prev, url]);
+      setPortfolioInput('');
+    }
   };
 
   const handleAddSkill = () => {
@@ -219,6 +230,34 @@ export default function CandidateProfilePage() {
                       <X className="w-3 h-3 hover:text-red-500" />
                     </button>
                   </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Portfolio Links */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">Portfolio Links</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={portfolioInput}
+                  onChange={(e) => setPortfolioInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddPortfolio())}
+                  placeholder="https://your-project.com"
+                  className="flex-1 h-10 px-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-sm"
+                />
+                <button type="button" onClick={handleAddPortfolio} className="px-4 py-2 bg-slate-100 dark:bg-slate-800 font-semibold text-xs rounded-xl flex items-center gap-1">
+                  <Plus className="w-4 h-4" /> Add
+                </button>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {portfolioLinks.map((link) => (
+                  <div key={link} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                    <a href={link} target="_blank" rel="noreferrer" className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 truncate hover:underline">{link}</a>
+                    <button type="button" onClick={() => setPortfolioLinks((prev) => prev.filter((l) => l !== link))}>
+                      <X className="w-3 h-3 text-slate-400 hover:text-red-500" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>

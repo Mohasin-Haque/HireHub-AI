@@ -23,7 +23,7 @@ export async function getProfile() {
   return data;
 }
 
-export async function upsertProfile(input: ProfileInput) {
+export async function upsertProfile(input: ProfileInput & { portfolioLinks?: string[] }) {
   const { supabase, user } = await getAuthUser();
   const validated = profileSchema.parse(input);
 
@@ -44,6 +44,7 @@ export async function upsertProfile(input: ProfileInput) {
       linkedin_url: validated.linkedinUrl || null,
       skills: validated.skills,
       experience_yrs: validated.experienceYrs,
+      portfolio_links: input.portfolioLinks || [],
       profile_completion: completion,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
@@ -221,7 +222,7 @@ export async function applyToJob(jobId: string, coverLetter: string, resumeUrl?:
       cover_letter: coverLetter,
       resume_url: resumeUrl || null,
       status: 'PENDING',
-      match_score: Math.floor(Math.random() * 15) + 82,
+      match_score: null,
     })
     .select()
     .single();
@@ -252,4 +253,47 @@ export async function saveSearch(name: string, query: Record<string, unknown>) {
 export async function deleteSavedSearch(id: string) {
   const { supabase } = await getAuthUser();
   await supabase.from('saved_searches').delete().eq('id', id);
+}
+
+// ── Recently Viewed ───────────────────────────────────────────
+
+export async function trackRecentlyViewed(jobId: string) {
+  try {
+    const { supabase, user } = await getAuthUser();
+    // Upsert into activity_logs — deduplicate by deleting old entry first
+    await supabase
+      .from('activity_logs')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('action', 'VIEW_JOB')
+      .eq('entity_id', jobId);
+    await supabase.from('activity_logs').insert({
+      user_id: user.id,
+      action: 'VIEW_JOB',
+      entity: 'job',
+      entity_id: jobId,
+    });
+  } catch {
+    // Non-critical — silently ignore if unauthenticated
+  }
+}
+
+export async function getRecentlyViewedJobs(limit = 6) {
+  const { supabase, user } = await getAuthUser();
+  const { data: logs } = await supabase
+    .from('activity_logs')
+    .select('entity_id')
+    .eq('user_id', user.id)
+    .eq('action', 'VIEW_JOB')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (!logs?.length) return [];
+  const jobIds = logs.map((l: any) => l.entity_id).filter(Boolean);
+
+  const { data } = await supabase
+    .from('jobs')
+    .select('*, companies(name, logo_url, website)')
+    .in('id', jobIds);
+  return data || [];
 }

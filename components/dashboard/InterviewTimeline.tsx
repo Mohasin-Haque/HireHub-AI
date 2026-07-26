@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDate } from '@/lib/utils';
-import { CheckCircle, Circle, MessageSquare, Briefcase, Award } from 'lucide-react';
+import { Circle, MessageSquare, Briefcase, Award } from 'lucide-react';
 
 const getStatusIcon = (status: string) => {
     switch (status) {
@@ -21,7 +21,7 @@ export function InterviewTimeline({ history }: { history: any[] }) {
         <div className="mt-8">
             <h3 className="text-lg font-bold mb-4">Application History</h3>
             <ol className="relative border-l border-slate-200 dark:border-slate-700">
-                {history.map((item, index) => (
+                {history.map((item) => (
                     <li key={item.id} className="mb-10 ml-6">
                         <span className="absolute flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full -left-4 ring-8 ring-white dark:ring-gray-900 dark:bg-blue-900">
                             {getStatusIcon(item.status)}

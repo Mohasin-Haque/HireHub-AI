@@ -2,8 +2,6 @@
 
 import React from 'react';
 import { formatDate } from '@/lib/utils';
-import { Activity } from 'lucide-react';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 
 interface ActivityItem {
   id: string;

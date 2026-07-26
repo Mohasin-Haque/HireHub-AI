@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         cover_letter: coverLetter,
         resume_url: resumeUrl || null,
         status: 'PENDING',
-        match_score: Math.floor(Math.random() * 15) + 82,
+        match_score: null,
       })
       .select()
       .single();

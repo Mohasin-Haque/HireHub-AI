@@ -14,12 +14,13 @@ async function getAdminUser() {
 
 export async function getAdminStats() {
   const { supabase } = await getAdminUser();
-  const [usersRes, companiesRes, jobsRes, appsRes, aiRes] = await Promise.all([
+  const [usersRes, companiesRes, jobsRes, appsRes, aiRes, reviewsRes] = await Promise.all([
     supabase.from('users').select('id, role, created_at'),
-    supabase.from('companies').select('id, created_at'),
+    supabase.from('companies').select('id, name, industry, hiring_status, created_at'),
     supabase.from('jobs').select('id, status, created_at'),
     supabase.from('applications').select('id, status, created_at'),
     supabase.from('ai_history').select('id, action, tokens_used, created_at'),
+    supabase.from('company_reviews').select('id, title, body, rating, created_at').order('created_at', { ascending: false }).limit(50),
   ]);
 
   return {
@@ -28,6 +29,7 @@ export async function getAdminStats() {
     jobs: jobsRes.data || [],
     applications: appsRes.data || [],
     aiHistory: aiRes.data || [],
+    reviews: reviewsRes.data || [],
   };
 }
 

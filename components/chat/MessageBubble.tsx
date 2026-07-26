@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { cn, formatDate } from '@/lib/utils';
 import { Check, CheckCheck } from 'lucide-react';
 import type { ChatMessage } from '@/lib/chat-types';
@@ -28,8 +29,7 @@ export function MessageBubble({
         {showAvatar && !isMine && (
           <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">
             {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt={senderName || ''} className="w-full h-full object-cover" />
+              <Image src={avatarUrl} alt={senderName || ''} width={28} height={28} className="w-full h-full object-cover" />
             ) : (
               (senderName?.[0] || '?').toUpperCase()
             )}
@@ -57,10 +57,12 @@ export function MessageBubble({
           <div className="mt-2">
             {message.attachment_type?.startsWith('image/') ? (
               <a href={message.attachment_url} target="_blank" rel="noopener noreferrer">
-                <img
+                <Image
                   src={message.attachment_url}
                   alt={message.attachment_name || 'Attachment'}
-                  className="max-w-xs rounded-lg"
+                  width={320}
+                  height={240}
+                  className="max-w-xs rounded-lg object-cover"
                 />
               </a>
             ) : (

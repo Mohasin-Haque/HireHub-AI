@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import { formatDate } from '@/lib/utils';
@@ -23,9 +23,9 @@ export function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
       .from('notifications')
@@ -37,7 +37,7 @@ export function NotificationCenter() {
       setNotifications(data);
       setUnreadCount(data.filter((n: Notification) => !n.read).length);
     }
-  };
+  }, [user, supabase]);
 
   useEffect(() => {
     fetchNotifications();
@@ -59,7 +59,7 @@ export function NotificationCenter() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, fetchNotifications, supabase]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {

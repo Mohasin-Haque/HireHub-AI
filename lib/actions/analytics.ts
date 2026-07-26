@@ -1,11 +1,18 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createServerClient } from '@supabase/supabase-js';
 import { unstable_cache as cache } from 'next/cache';
+
+// Use a cookie-free anon client for public cached queries
+function createAnonClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://demo-hirehub-ai.supabase.co';
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'demo-anon-key-hirehub-ai-2026';
+  return createServerClient(url, key);
+}
 
 export const getTrendingSkills = cache(
   async () => {
-    const supabase = await createClient();
+    const supabase = createAnonClient();
     const { data } = await supabase
       .from('jobs')
       .select('tags')
@@ -31,7 +38,7 @@ export const getTrendingSkills = cache(
 
 export const getTrendingCompanies = cache(
   async () => {
-    const supabase = await createClient();
+    const supabase = createAnonClient();
     const { data } = await supabase
       .from('jobs')
       .select('company_id, companies(id, name, logo_url)')

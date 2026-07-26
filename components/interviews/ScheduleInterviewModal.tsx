@@ -5,7 +5,7 @@ import { scheduleInterview, updateInterview } from '@/lib/actions/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog } from '@/components/ui/dialog';
-import { Calendar, Video, Phone, MapPin, Users, Clock } from 'lucide-react';
+import { Calendar, Video, Phone, MapPin, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ScheduleInterviewModalProps {

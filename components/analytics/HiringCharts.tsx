@@ -94,3 +94,26 @@ export function ApplicationsBarChart({ data }: ApplicationsBarProps) {
     </ResponsiveContainer>
   );
 }
+
+interface GrowthChartProps {
+  data: { label: string; users: number; jobs: number; companies: number }[];
+}
+
+export function GrowthLineChart({ data }: GrowthChartProps) {
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+        <Tooltip
+          contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, fontSize: 12 }}
+          labelStyle={{ color: '#e2e8f0' }}
+        />
+        <Line type="monotone" dataKey="users" stroke="#6366f1" strokeWidth={2} dot={false} name="Users" />
+        <Line type="monotone" dataKey="jobs" stroke="#10b981" strokeWidth={2} dot={false} name="Jobs" />
+        <Line type="monotone" dataKey="companies" stroke="#f59e0b" strokeWidth={2} dot={false} name="Companies" />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}

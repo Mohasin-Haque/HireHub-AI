@@ -16,7 +16,7 @@ export default function CompanyProfilePage() {
   const [company, setCompany] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const logoRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({

@@ -183,22 +183,30 @@ export async function getJobApplications(jobId?: string) {
   const company = await getEmployerCompany(supabase, user.id);
   if (!company) return [];
 
-  let query = supabase
+  const { data: companyJobs } = await supabase.from('jobs').select('id').eq('company_id', company.id);
+  const jobIds = (companyJobs || []).map((j: any) => j.id);
+  if (!jobIds.length) return [];
+
+  const targetJobIds = jobId ? [jobId] : jobIds;
+
+  const { data: apps, error } = await supabase
     .from('applications')
-    .select('*, jobs(title, company_id), profiles!candidate_id(full_name, avatar_url, headline, resume_url, skills)')
+    .select('*, jobs(title, company_id)')
+    .in('job_id', targetJobIds)
     .order('created_at', { ascending: false });
 
-  if (jobId) {
-    query = query.eq('job_id', jobId);
-  } else {
-    const { data: companyJobs } = await supabase.from('jobs').select('id').eq('company_id', company.id);
-    const jobIds = (companyJobs || []).map((j: any) => j.id);
-    if (!jobIds.length) return [];
-    query = query.in('job_id', jobIds);
-  }
+  if (error || !apps?.length) return [];
 
-  const { data } = await query;
-  return data || [];
+  // Fetch profiles separately — no direct FK from candidate_id to profiles
+  const candidateIds = [...new Set(apps.map((a: any) => a.candidate_id))];
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('user_id, full_name, avatar_url, headline, resume_url, skills')
+    .in('user_id', candidateIds);
+
+  const profileMap = Object.fromEntries((profiles || []).map((p: any) => [p.user_id, p]));
+
+  return apps.map((a: any) => ({ ...a, profiles: profileMap[a.candidate_id] || null }));
 }
 
 export async function updateApplicationStatus(id: string, status: string, notes?: string) {
@@ -249,18 +257,21 @@ export async function getApplicationById(id: string) {
 
   const { data: application } = await supabase
     .from('applications')
-    .select('*, jobs(*), profiles!candidate_id(*)')
+    .select('*, jobs(*)')
     .eq('id', id)
     .single();
 
   if (!application) throw new Error('Application not found');
+  if ((application.jobs as any)?.company_id !== company.id) throw new Error('Forbidden');
 
-  // Security check: ensure the job belongs to the employer's company
-  if ((application.jobs as any)?.company_id !== company.id) {
-    throw new Error('Forbidden');
-  }
+  // Fetch profile separately
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', application.candidate_id)
+    .single();
 
-  return application;
+  return { ...application, profiles: profile || null };
 }
 
 // ── Analytics ─────────────────────────────────────────────────

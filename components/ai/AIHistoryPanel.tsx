@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect, useTransition, useCallback } from 'react';
 import { getAIHistory, toggleAIHistoryFavorite, deleteAIHistory } from '@/lib/actions/ai';
+import { generateJobDescription, improveJobTitle, suggestSkills, generateCoverLetter, generateInterviewQuestions, generateCompanySummary, analyzeResume, calculateATSScore } from '@/lib/actions/ai';
 import { formatDate } from '@/lib/utils';
-import { Sparkles, Star, Trash2, Copy, RefreshCw, Search } from 'lucide-react';
+import { Sparkles, Star, Trash2, Copy, Search, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ACTION_LABELS: Record<string, string> = {
@@ -39,14 +40,37 @@ export function AIHistoryPanel() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const load = () => {
+  const [regenerating, setRegenerating] = useState<string | null>(null);
+
+  const load = useCallback(() => {
     startTransition(async () => {
       const data = await getAIHistory(filter || undefined, search || undefined);
       setItems(data as AIHistoryItem[]);
     });
-  };
+  }, [filter, search, startTransition]);
 
-  useEffect(() => { load(); }, [filter, search]);
+  useEffect(() => { load(); }, [load]);
+
+  const handleRegenerate = async (item: AIHistoryItem) => {
+    setRegenerating(item.id);
+    try {
+      const p = item.input_payload;
+      switch (item.action) {
+        case 'GENERATE_DESCRIPTION': await generateJobDescription(p as any); break;
+        case 'IMPROVE_TITLE': await improveJobTitle(p as any); break;
+        case 'SUGGEST_SKILLS': await suggestSkills(p as any); break;
+        case 'COVER_LETTER': await generateCoverLetter(p as any); break;
+        case 'INTERVIEW_QUESTIONS': await generateInterviewQuestions(p as any); break;
+        case 'COMPANY_SUMMARY': await generateCompanySummary(p as any); break;
+        case 'RESUME_ANALYZE': await analyzeResume(p.resumeText || ''); break;
+        case 'ATS_SCORE': await calculateATSScore(p.resumeText || '', p.jobDescription || ''); break;
+        default: toast.error('Regeneration not supported for this action'); return;
+      }
+      toast.success('Regenerated — check the top of your history');
+      load();
+    } catch (err: any) { toast.error(err.message); }
+    finally { setRegenerating(null); }
+  };
 
   const handleFavorite = async (id: string) => {
     await toggleAIHistoryFavorite(id);
@@ -123,6 +147,14 @@ export function AIHistoryPanel() {
                     title="Favorite"
                   >
                     <Star className={`w-3.5 h-3.5 ${item.is_favorite ? 'fill-amber-500' : ''}`} />
+                  </button>
+                  <button
+                    onClick={() => handleRegenerate(item)}
+                    disabled={regenerating === item.id}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-500 disabled:opacity-40"
+                    title="Regenerate"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${regenerating === item.id ? 'animate-spin' : ''}`} />
                   </button>
                   <button onClick={() => handleCopy(item)} className="p-1.5 rounded-lg text-slate-400 hover:text-brand-500" title="Copy output">
                     <Copy className="w-3.5 h-3.5" />

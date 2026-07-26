@@ -4,15 +4,24 @@ import { createServerClient } from '@supabase/ssr';
 
 // --- Route Protection Configuration ---
 
+// Public API routes that don't require authentication
+const PUBLIC_API_ROUTES = [
+  '/api/jobs',
+  '/api/search/autocomplete',
+  '/api/upload',
+];
+
 const ROUTE_CONFIG = {
   '/dashboard/candidate': ['CANDIDATE', 'ADMIN'],
   '/dashboard/employer': ['EMPLOYER', 'ADMIN'],
   '/dashboard/admin': ['ADMIN'],
+  '/dashboard/messages': ['CANDIDATE', 'EMPLOYER', 'ADMIN'],
+  '/dashboard/settings': ['CANDIDATE', 'EMPLOYER', 'ADMIN'],
   '/api/ai/cover-letter': ['CANDIDATE'],
   '/api/ai/ats-score': ['CANDIDATE'],
   '/api/resume/parse': ['CANDIDATE'],
-  '/api/ai': ['EMPLOYER', 'ADMIN'], // Default for other AI routes
-  '/api/applications': ['CANDIDATE'],
+  '/api/ai': ['EMPLOYER', 'ADMIN', 'CANDIDATE'],
+  '/api/applications': ['CANDIDATE', 'EMPLOYER', 'ADMIN'],
   '/api/bookmarks': ['CANDIDATE'],
   '/api/interviews': ['EMPLOYER', 'ADMIN'],
   '/api/jobs': ['EMPLOYER', 'ADMIN'],
@@ -53,6 +62,13 @@ export async function middleware(request: NextRequest) {
 
   // --- API Route Protection ---
   if (pathname.startsWith('/api')) {
+    // Allow public API routes without auth
+    const isPublicApi = PUBLIC_API_ROUTES.some(p => pathname.startsWith(p));
+    // Allow GET on public routes
+    if (isPublicApi && request.method === 'GET') {
+      return response;
+    }
+
     if (!user) {
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }

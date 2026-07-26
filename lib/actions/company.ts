@@ -26,7 +26,7 @@ export async function addCompanyReview(companyId: string, review: { rating: numb
 
   await supabase.from('company_reviews').insert({
     company_id: companyId,
-    user_id: user.id,
+    reviewer_id: user.id,
     rating: review.rating,
     title: review.title,
     body: review.body,

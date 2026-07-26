@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getAdminStats, getAllUsers, updateUserRole, moderateJob, getFeatureFlags, toggleFeatureFlag, getAuditLogs } from '@/lib/actions/admin';
 import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Users, Briefcase, Building2, Sparkles, Shield, Search, ToggleLeft, ToggleRight, Activity } from 'lucide-react';
 import { toast } from 'sonner';
+import { GrowthLineChart } from '@/components/analytics/HiringCharts';
 
-const TABS = ['Overview', 'Users', 'Jobs', 'Feature Flags', 'Audit Logs'] as const;
+const TABS = ['Overview', 'Users', 'Jobs', 'Companies', 'Reviews', 'Analytics', 'Feature Flags', 'Audit Logs'] as const;
 type Tab = typeof TABS[number];
 
 export default function AdminDashboard() {
@@ -18,20 +18,21 @@ export default function AdminDashboard() {
   const [flags, setFlags] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(true);
 
   const load = () => {
-    startTransition(async () => {
-      const [s, u, f, logs] = await Promise.all([
-        getAdminStats(),
-        getAllUsers(),
-        getFeatureFlags(),
-        getAuditLogs(50),
-      ]);
+    setIsLoading(true);
+    Promise.all([
+      getAdminStats(),
+      getAllUsers(),
+      getFeatureFlags(),
+      getAuditLogs(50),
+    ]).then(([s, u, f, logs]) => {
       setStats(s);
       setUsers(u);
       setFlags(f);
       setAuditLogs(logs);
+      setIsLoading(false);
     });
   };
 
@@ -257,6 +258,105 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Companies tab */}
+      {activeTab === 'Companies' && stats && (
+        <div className="p-6 rounded-3xl glass-panel space-y-4">
+          <h3 className="font-bold text-lg text-slate-900 dark:text-white">Company Moderation</h3>
+          <div className="space-y-2">
+            {stats.companies.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-6">No companies registered yet</p>
+            ) : (
+              stats.companies.map((company: any) => (
+                <div key={company.id} className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{company.name || company.id}</p>
+                    <p className="text-xs text-slate-400">{company.industry} · {formatDate(company.created_at)}</p>
+                  </div>
+                  <Badge variant={company.hiring_status ? 'success' : 'default'}>
+                    {company.hiring_status ? 'Hiring' : 'Not Hiring'}
+                  </Badge>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Reviews tab */}
+      {activeTab === 'Reviews' && stats && (
+        <div className="p-6 rounded-3xl glass-panel space-y-4">
+          <h3 className="font-bold text-lg text-slate-900 dark:text-white">Review Moderation</h3>
+          {(stats.reviews || []).length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-6">No reviews submitted yet</p>
+          ) : (
+            <div className="space-y-2">
+              {(stats.reviews || []).map((review: any) => (
+                <div key={review.id} className="flex items-start justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{review.title || 'Review'}</p>
+                    <p className="text-xs text-slate-400 truncate">{review.body}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Rating: {review.rating}/5 · {formatDate(review.created_at)}</p>
+                  </div>
+                  <button
+                    onClick={() => toast.info('Review deletion requires admin DB access')}
+                    className="text-xs font-semibold text-red-500 hover:underline shrink-0"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Analytics tab */}
+      {activeTab === 'Analytics' && stats && (() => {
+        // Build monthly growth data from created_at timestamps
+        const months = Array.from({ length: 6 }, (_, i) => {
+          const d = new Date();
+          d.setMonth(d.getMonth() - (5 - i));
+          return d.toLocaleString('en-US', { month: 'short' });
+        });
+        const growthData = months.map((label, i) => {
+          const d = new Date();
+          d.setMonth(d.getMonth() - (5 - i));
+          const month = d.getMonth();
+          const year = d.getFullYear();
+          const inMonth = (arr: any[]) => arr.filter((x: any) => {
+            const c = new Date(x.created_at);
+            return c.getMonth() === month && c.getFullYear() === year;
+          }).length;
+          return { label, users: inMonth(stats.users), jobs: inMonth(stats.jobs), companies: inMonth(stats.companies) };
+        });
+        const aiByAction = stats.aiHistory.reduce((acc: Record<string, number>, h: any) => {
+          acc[h.action] = (acc[h.action] || 0) + 1;
+          return acc;
+        }, {});
+        return (
+          <div className="space-y-6">
+            <div className="p-5 rounded-2xl glass-panel space-y-3">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white">Platform Growth (Last 6 Months)</h4>
+              <GrowthLineChart data={growthData} />
+            </div>
+            <div className="p-5 rounded-2xl glass-panel space-y-3">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white">AI Usage by Action</h4>
+              <div className="space-y-2">
+                {Object.entries(aiByAction).map(([action, count]) => (
+                  <div key={action} className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500 font-mono">{action}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 rounded-full bg-brand-500" style={{ width: `${Math.min((count as number) * 8, 120)}px` }} />
+                      <span className="font-bold text-slate-900 dark:text-white w-6 text-right">{count as number}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

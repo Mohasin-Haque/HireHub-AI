@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getBookmarkedJobs, getSavedSearches, deleteSavedSearch } from '@/lib/actions/candidate';
 import { JobCard } from '@/components/jobs/JobCard';
-import { Button } from '@/components/ui/button';
 import { ArrowLeft, Bookmark, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -13,22 +12,21 @@ export default function SavedItemsPage() {
   const [activeTab, setActiveTab] = useState<'jobs' | 'searches'>('jobs');
   const [savedJobs, setSavedJobs] = useState<any[]>([]);
   const [savedSearches, setSavedSearches] = useState<any[]>([]);
-  const [isLoading, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadData = () => {
-    startTransition(async () => {
-      const [jobs, searches] = await Promise.all([
-        getBookmarkedJobs().catch(() => []),
-        getSavedSearches().catch(() => []),
-      ]);
+    setIsLoading(true);
+    Promise.all([
+      getBookmarkedJobs().catch(() => []),
+      getSavedSearches().catch(() => []),
+    ]).then(([jobs, searches]) => {
       setSavedJobs(jobs);
       setSavedSearches(searches);
+      setIsLoading(false);
     });
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const handleBookmarkToggle = (jobId: string, newState: boolean) => {
     if (!newState) setSavedJobs((prev) => prev.filter((j) => j.id !== jobId));
@@ -39,7 +37,7 @@ export default function SavedItemsPage() {
       await deleteSavedSearch(id);
       toast.success('Saved search deleted');
       loadData();
-    } catch (err) {
+    } catch {
       toast.error('Failed to delete saved search');
     }
   };
@@ -100,11 +98,16 @@ export default function SavedItemsPage() {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12 text-sm text-slate-400">Loading...</div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+            ))}
+          </div>
         ) : activeTab === 'jobs' ? (
           savedJobs.length === 0 ? (
             <div className="text-center py-12 space-y-3">
-              <p className="text-sm font-semibold text-slate-500">You haven't bookmarked any jobs yet.</p>
+              <Bookmark className="w-10 h-10 text-slate-300 mx-auto" />
+              <p className="text-sm font-semibold text-slate-500">You haven&apos;t bookmarked any jobs yet.</p>
               <Link href="/jobs" className="px-4 py-2 bg-brand-600 text-white font-semibold text-xs rounded-xl inline-block">
                 Explore Available Positions
               </Link>
@@ -124,7 +127,8 @@ export default function SavedItemsPage() {
         ) : (
           savedSearches.length === 0 ? (
             <div className="text-center py-12 space-y-3">
-              <p className="text-sm font-semibold text-slate-500">You haven't saved any searches yet.</p>
+              <Search className="w-10 h-10 text-slate-300 mx-auto" />
+              <p className="text-sm font-semibold text-slate-500">You haven&apos;t saved any searches yet.</p>
               <p className="text-xs text-slate-400">Save a search from the Jobs page to get notified about new listings.</p>
             </div>
           ) : (
@@ -147,7 +151,7 @@ export default function SavedItemsPage() {
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                )
+                );
               })}
             </div>
           )
