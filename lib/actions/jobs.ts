@@ -55,7 +55,7 @@ export async function getPublicJobById(id: string) {
   const supabase = createPublicClient();
   const { data } = await supabase
     .from('jobs')
-    .select('*, companies(name, logo_url, website, description)')
+    .select('*, companies(name, logo_url, website, description, owner_id)')
     .eq('id', id)
     .single();
   return data ?? null;

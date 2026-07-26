@@ -6,6 +6,7 @@ import { getApplicationById, getApplicationStatusHistory } from '@/lib/actions/e
 import { ArrowLeft, FileText, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { InterviewTimeline } from '@/components/dashboard/InterviewTimeline';
+import { MessageCandidateButton } from '@/components/chat/MessageCandidateButton';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -49,6 +50,7 @@ async function ApplicationData({ id }: { id: string }) {
                 <Sparkles className="w-4 h-4" />
                 <span className="font-bold">{application.match_score}% Match</span>
               </div>
+              <MessageCandidateButton candidateId={application.candidate_id} candidateName={profile.full_name} />
             </div>
           </div>
         </div>

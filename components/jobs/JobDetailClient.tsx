@@ -4,13 +4,14 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { toggleBookmark } from '@/lib/actions/candidate';
+import { startConversation } from '@/lib/actions/shared';
 import { formatSalary, formatDate } from '@/lib/utils';
 import { ApplyModal } from '@/components/jobs/ApplyModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   MapPin, DollarSign, Bookmark, Send, Sparkles,
-  ExternalLink, ChevronLeft, HelpCircle, Eye,
+  ExternalLink, ChevronLeft, HelpCircle, Eye, MessageSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,6 +21,22 @@ export function JobDetailClient({ job }: { job: any }) {
   const [isApplyOpen, setIsApplyOpen] = useState(false);
   const [interviewQuestions, setInterviewQuestions] = useState<Array<{ category: string; question: string; evalCriteria: string }>>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [messagingEmployer, setMessagingEmployer] = useState(false);
+
+  const employerOwnerId = job.companies?.owner_id ?? null;
+
+  const handleMessageEmployer = async () => {
+    if (!employerOwnerId) return toast.error('Employer contact not available');
+    setMessagingEmployer(true);
+    try {
+      const convId = await startConversation(employerOwnerId);
+      router.push(`/dashboard/messages/${convId}`);
+    } catch {
+      toast.error('Sign in to message the employer');
+    } finally {
+      setMessagingEmployer(false);
+    }
+  };
 
   const normalized = {
     id: job.id,
@@ -125,6 +142,16 @@ export function JobDetailClient({ job }: { job: any }) {
               <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-amber-500' : ''}`} />
               {isBookmarked ? 'Saved' : 'Save Position'}
             </button>
+            <Button
+              onClick={handleMessageEmployer}
+              isLoading={messagingEmployer}
+              variant="outline"
+              size="lg"
+              className="gap-2"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Message
+            </Button>
             <Button onClick={() => setIsApplyOpen(true)} variant="primary" size="lg" className="gap-2">
               <Send className="w-4 h-4" />
               Apply Now
