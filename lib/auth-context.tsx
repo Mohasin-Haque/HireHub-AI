@@ -105,8 +105,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, [supabase, buildAuthUser]);
+    // Re-fetch role on window focus to pick up any DB role changes
+    const handleFocus = () => { refreshUser(); };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [supabase, buildAuthUser, refreshUser]);
 
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
