@@ -1,11 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
-export type UserRole = 'EMPLOYER' | 'CANDIDATE';
+export type UserRole = 'EMPLOYER' | 'CANDIDATE' | 'ADMIN';
 
-export interface User {
+export interface AuthUser {
   id: string;
   email: string;
   fullName: string;
@@ -15,142 +17,144 @@ export interface User {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
+  session: Session | null;
   role: UserRole;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, role?: UserRole) => Promise<void>;
-  signup: (fullName: string, email: string, role: UserRole, companyName?: string) => Promise<void>;
-  logout: () => void;
-  switchRole: (newRole: UserRole) => void;
+  login: (email: string, password: string) => Promise<{ error?: string }>;
+  signup: (fullName: string, email: string, password: string, role: UserRole, companyName?: string) => Promise<{ error?: string }>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
-
-const DEFAULT_USER: User = {
-  id: 'user-cand-1',
-  email: 'alex.morgan@example.com',
-  fullName: 'Alex Morgan',
-  role: 'CANDIDATE',
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-};
-
-const setSessionCookie = (user: User) => {
-  if (typeof window !== 'undefined') {
-    document.cookie = `hirehub_user_session=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=604800; SameSite=Lax`;
-  }
-};
-
-const removeSessionCookie = () => {
-  if (typeof window !== 'undefined') {
-    document.cookie = 'hirehub_user_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
-  }
-};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole>('CANDIDATE');
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const supabase = createClient();
+
+  const buildAuthUser = useCallback(async (supabaseUser: SupabaseUser): Promise<AuthUser> => {
+    const meta = supabaseUser.user_metadata || {};
+
+    // Fetch role from DB. If the row is missing (trigger didn't fire),
+    // insert it on-the-fly so the user isn't silently demoted to CANDIDATE.
+    let { data: dbUser } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', supabaseUser.id)
+      .single();
+
+    if (!dbUser) {
+      // Row missing — insert it now (trigger may have been skipped for manually-created users)
+      const metaRole = (meta.role as UserRole) || 'CANDIDATE';
+      await supabase.from('users').upsert({
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        role: metaRole,
+      }, { onConflict: 'id' });
+      dbUser = { role: metaRole };
+    }
+
+    return {
+      id: supabaseUser.id,
+      email: supabaseUser.email || '',
+      fullName: meta.full_name || meta.fullName || supabaseUser.email?.split('@')[0] || 'User',
+      role: (dbUser.role as UserRole) || 'CANDIDATE',
+      avatarUrl: meta.avatar_url || meta.avatarUrl,
+      companyName: meta.company_name || meta.companyName,
+    };
+  }, [supabase]);
+
+  const refreshUser = useCallback(async () => {
+    const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+    if (supabaseUser) {
+      const authUser = await buildAuthUser(supabaseUser);
+      setUser(authUser);
+      setRole(authUser.role);
+    }
+  }, [supabase, buildAuthUser]);
 
   useEffect(() => {
-    // Check saved session in localStorage
-    const savedUser = localStorage.getItem('hirehub_user_session');
-    if (savedUser) {
-      try {
-        const parsed = JSON.parse(savedUser);
-        setUser(parsed);
-        setRole(parsed.role);
-        setSessionCookie(parsed);
-      } catch {
-        setUser(DEFAULT_USER);
-        setRole('CANDIDATE');
-        setSessionCookie(DEFAULT_USER);
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      setSession(s);
+      if (s?.user) {
+        const authUser = await buildAuthUser(s.user);
+        setUser(authUser);
+        setRole(authUser.role);
       }
-    } else {
-      // Default to demo Candidate session
-      setUser(DEFAULT_USER);
-      setRole('CANDIDATE');
-      localStorage.setItem('hirehub_user_session', JSON.stringify(DEFAULT_USER));
-      setSessionCookie(DEFAULT_USER);
-    }
-    setIsLoading(false);
-  }, []);
+      setIsLoading(false);
+    });
 
-  const login = async (email: string, targetRole: UserRole = 'CANDIDATE') => {
-    setIsLoading(true);
-    await new Promise((res) => setTimeout(res, 600));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
+      setSession(s);
+      if (s?.user) {
+        const authUser = await buildAuthUser(s.user);
+        setUser(authUser);
+        setRole(authUser.role);
+      } else {
+        setUser(null);
+        setRole('CANDIDATE');
+      }
+      setIsLoading(false);
+    });
 
-    const loggedUser: User = {
-      id: targetRole === 'EMPLOYER' ? 'user-emp-1' : 'user-cand-1',
-      email,
-      fullName: email.split('@')[0].replace('.', ' '),
-      role: targetRole,
-      avatarUrl: targetRole === 'EMPLOYER' 
-        ? 'https://avatar.vercel.sh/employer?text=EMP' 
-        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      companyName: targetRole === 'EMPLOYER' ? 'Vercel Inc.' : undefined,
-    };
+    return () => subscription.unsubscribe();
+  }, [supabase, buildAuthUser]);
 
-    setUser(loggedUser);
-    setRole(targetRole);
-    localStorage.setItem('hirehub_user_session', JSON.stringify(loggedUser));
-    setSessionCookie(loggedUser);
-    setIsLoading(false);
+  const login = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error.message };
+    return {};
   };
 
-  const signup = async (fullName: string, email: string, targetRole: UserRole, companyName?: string) => {
-    setIsLoading(true);
-    await new Promise((res) => setTimeout(res, 600));
-
-    const newUser: User = {
-      id: `user-${Date.now()}`,
+  const signup = async (
+    fullName: string,
+    email: string,
+    password: string,
+    targetRole: UserRole,
+    companyName?: string
+  ) => {
+    const { error } = await supabase.auth.signUp({
       email,
-      fullName,
-      role: targetRole,
-      avatarUrl: `https://avatar.vercel.sh/${encodeURIComponent(fullName)}`,
-      companyName: targetRole === 'EMPLOYER' ? (companyName || 'My Startup') : undefined,
-    };
-
-    setUser(newUser);
-    setRole(targetRole);
-    localStorage.setItem('hirehub_user_session', JSON.stringify(newUser));
-    setSessionCookie(newUser);
-    setIsLoading(false);
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          role: targetRole,
+          company_name: companyName || null,
+        },
+      },
+    });
+    if (error) return { error: error.message };
+    return {};
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('hirehub_user_session');
-    removeSessionCookie();
+    setSession(null);
     router.push('/');
-  };
-
-  const switchRole = (newRole: UserRole) => {
-    setRole(newRole);
-    if (user) {
-      const updated = {
-        ...user,
-        role: newRole,
-        companyName: newRole === 'EMPLOYER' ? (user.companyName || 'HireHub Partner Tech') : undefined,
-      };
-      setUser(updated);
-      localStorage.setItem('hirehub_user_session', JSON.stringify(updated));
-      setSessionCookie(updated);
-    }
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        session,
         role,
         isAuthenticated: !!user,
         isLoading,
         login,
         signup,
         logout,
-        switchRole,
+        refreshUser,
       }}
     >
       {children}
@@ -160,8 +164,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }

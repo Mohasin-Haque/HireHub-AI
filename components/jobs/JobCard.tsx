@@ -3,14 +3,31 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Job } from '@/lib/db/mock-data';
 import { formatSalary, formatDate } from '@/lib/utils';
 import { Bookmark, MapPin, DollarSign, Building2, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { HireHubStore } from '@/lib/db/store';
+import { toggleBookmark } from '@/lib/actions/candidate';
+import { toast } from 'sonner';
 
 interface JobCardProps {
-  job: Job;
+  job: {
+    id: string;
+    title: string;
+    companyName: string;
+    companyLogo?: string | null;
+    companyWebsite?: string;
+    location: string;
+    workplaceType: string;
+    jobType: string;
+    experienceLevel: string;
+    salaryMin?: number | null;
+    salaryMax?: number | null;
+    salaryCurrency?: string;
+    description: string;
+    tags: string[];
+    viewsCount: number;
+    createdAt: string;
+  };
   isBookmarkedInitial?: boolean;
   onBookmarkToggle?: (jobId: string, newState: boolean) => void;
 }
@@ -18,13 +35,15 @@ interface JobCardProps {
 export function JobCard({ job, isBookmarkedInitial = false, onBookmarkToggle }: JobCardProps) {
   const [isBookmarked, setIsBookmarked] = useState(isBookmarkedInitial);
 
-  const handleBookmark = (e: React.MouseEvent) => {
+  const handleBookmark = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const newState = HireHubStore.toggleBookmark(job.id);
-    setIsBookmarked(newState);
-    if (onBookmarkToggle) {
-      onBookmarkToggle(job.id, newState);
+    try {
+      const newState = await toggleBookmark(job.id);
+      setIsBookmarked(newState);
+      if (onBookmarkToggle) onBookmarkToggle(job.id, newState);
+    } catch {
+      toast.error('Sign in to save jobs');
     }
   };
 

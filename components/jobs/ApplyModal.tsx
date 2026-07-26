@@ -4,9 +4,8 @@ import React, { useState } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Job } from '@/lib/db/mock-data';
 import { useAuth } from '@/lib/auth-context';
-import { HireHubStore } from '@/lib/db/store';
+import { applyToJob } from '@/lib/actions/candidate';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { applyJobSchema, ApplyJobInput } from '@/lib/validations';
@@ -14,7 +13,7 @@ import { CheckCircle2, Sparkles, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ApplyModalProps {
-  job: Job;
+  job: { id: string; title: string; companyName: string };
   isOpen: boolean;
   onClose: () => void;
   onApplied?: () => void;
@@ -25,39 +24,32 @@ export function ApplyModal({ job, isOpen, onClose, onApplied }: ApplyModalProps)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const profile = HireHubStore.getProfile();
-
-  const {
+const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<ApplyJobInput>({
     resolver: zodResolver(applyJobSchema),
     defaultValues: {
-      fullName: user?.fullName || profile.fullName || '',
-      email: user?.email || profile.email || '',
-      coverLetter: `Hi hiring team at ${job.companyName},\n\nI am writing to express my strong interest in the ${job.title} position. With my background in ${profile.skills.slice(0, 3).join(', ')}, I am confident I can make an immediate impact on your product engineering team.`,
-      resumeUrl: profile.resumeUrl || 'https://alexmorgan.dev/resume.pdf',
+      fullName: user?.fullName || '',
+      email: user?.email || '',
+      coverLetter: `Hi hiring team,\n\nI am writing to express my strong interest in the ${job.title} position. I am confident I can make an immediate impact on your team.`,
+      resumeUrl: '',
     },
   });
 
   const onSubmit = async (data: ApplyJobInput) => {
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 800));
-
-    HireHubStore.applyToJob({
-      jobId: job.id,
-      candidateName: data.fullName,
-      candidateEmail: data.email,
-      coverLetter: data.coverLetter,
-      resumeUrl: data.resumeUrl,
-    });
-
-    setIsSubmitting(false);
-    setIsSuccess(true);
-    toast.success('Application submitted successfully!');
-
-    if (onApplied) onApplied();
+    try {
+      await applyToJob(job.id, data.coverLetter, data.resumeUrl);
+      setIsSuccess(true);
+      toast.success('Application submitted successfully!');
+      if (onApplied) onApplied();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit application');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
