@@ -19,6 +19,7 @@ import {
   Bookmark,
   PlusCircle,
   Shield,
+  MessageSquare,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
@@ -101,6 +102,20 @@ export function Navbar() {
                   Saved
                 </Link>
               </>
+            )}
+
+            {isAuthenticated && (
+              <Link
+                href="/dashboard/messages"
+                className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                  pathname.startsWith('/dashboard/messages')
+                    ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                Messages
+              </Link>
             )}
           </nav>
         </div>
@@ -283,6 +298,17 @@ export function Navbar() {
                 Saved Jobs
               </Link>
             </>
+          )}
+
+          {isAuthenticated && (
+            <Link
+              href="/dashboard/messages"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 py-2 text-slate-700 dark:text-slate-200 font-medium"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Messages
+            </Link>
           )}
 
           {isAuthenticated ? (
