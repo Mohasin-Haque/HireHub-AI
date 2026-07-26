@@ -33,8 +33,8 @@ jobs:
       - name: Build Next.js Production App
         run: npm run build
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder-anon-key-for-build-only"
           NEXT_PUBLIC_APP_URL: "https://hirehub-ai.vercel.app"
 
   deploy-vercel:
