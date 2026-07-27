@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { profileSchema, type ProfileInput } from '@/lib/validations';
+import { applyJobSchema, profileSchema, type ProfileInput } from '@/lib/validations';
 
 async function getAuthUser() {
   const supabase = await createClient();
@@ -214,13 +214,37 @@ export async function getCandidateApplications() {
 
 export async function applyToJob(jobId: string, coverLetter: string, resumeUrl?: string) {
   const { supabase, user } = await getAuthUser();
+
+  const resumeValidation = applyJobSchema.shape.resumeUrl.safeParse(resumeUrl);
+  if (!resumeValidation.success) {
+    throw new Error(resumeValidation.error.issues[0]?.message || 'A valid resume URL is required to apply.');
+  }
+
+  // Prevent duplicate applications
+  const { data: existing } = await supabase
+    .from('applications')
+    .select('id')
+    .eq('job_id', jobId)
+    .eq('candidate_id', user.id)
+    .maybeSingle();
+  if (existing) throw new Error('You have already applied to this job.');
+
+  // Verify job is still active
+  const { data: job } = await supabase
+    .from('jobs')
+    .select('id')
+    .eq('id', jobId)
+    .eq('status', 'ACTIVE')
+    .maybeSingle();
+  if (!job) throw new Error('This job is no longer accepting applications.');
+
   const { data, error } = await supabase
     .from('applications')
     .insert({
       job_id: jobId,
       candidate_id: user.id,
       cover_letter: coverLetter,
-      resume_url: resumeUrl || null,
+      resume_url: resumeValidation.data,
       status: 'PENDING',
       match_score: null,
     })

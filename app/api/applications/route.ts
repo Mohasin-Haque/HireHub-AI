@@ -9,7 +9,7 @@ function apiError(message: string, status: number) {
 const applySchema = z.object({
   jobId: z.string().uuid('jobId must be a valid UUID'),
   coverLetter: z.string().min(30, 'Cover letter must be at least 30 characters'),
-  resumeUrl: z.string().url('Invalid resume URL').optional().or(z.literal('')),
+  resumeUrl: z.string().url('A valid resume URL is required'),
 });
 
 export async function GET() {

@@ -33,8 +33,10 @@ export default function ConversationPage({ params }: PageProps) {
   const [otherTyping, setOtherTyping] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
+  const messageListRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shouldAutoScrollRef = useRef(true);
 
   const other = participants.find((p) => p.user_id !== user?.id) ?? null;
   const otherProfiles = other?.profiles;
@@ -51,20 +53,37 @@ export default function ConversationPage({ params }: PageProps) {
     : null;
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    const container = messageListRef.current;
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior });
+      return;
+    }
     bottomRef.current?.scrollIntoView({ behavior });
+  }, []);
+
+  const handleMessageScroll = useCallback(() => {
+    const container = messageListRef.current;
+    if (!container) return;
+    shouldAutoScrollRef.current =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 96;
   }, []);
 
   const loadData = useCallback(async () => {
     if (!user) return;
-    const [msgs, parts] = await Promise.all([
-      getMessages(conversationId) as unknown as Promise<ChatMessage[]>,
-      getConversationParticipants(conversationId) as unknown as Promise<ChatParticipant[]>,
-    ]);
-    setMessages(msgs);
-    setParticipants(parts);
-    setLoading(false);
-    await markMessagesRead(conversationId);
-  }, [conversationId, user]);
+    try {
+      const [msgs, parts] = await Promise.all([
+        getMessages(conversationId) as unknown as Promise<ChatMessage[]>,
+        getConversationParticipants(conversationId) as unknown as Promise<ChatParticipant[]>,
+      ]);
+      setMessages(msgs);
+      setParticipants(parts);
+      await markMessagesRead(conversationId);
+    } catch (error) {
+      console.error('Failed to load conversation', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [conversationId, user?.id]);
 
   useEffect(() => {
     loadData();
@@ -73,10 +92,6 @@ export default function ConversationPage({ params }: PageProps) {
   useEffect(() => {
     if (!loading) scrollToBottom('instant');
   }, [loading, scrollToBottom]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
 
   // Realtime messages subscription
   useEffect(() => {
@@ -93,10 +108,14 @@ export default function ConversationPage({ params }: PageProps) {
         },
         (payload) => {
           const newMsg = payload.new as ChatMessage;
+          const shouldScroll = shouldAutoScrollRef.current;
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
+          if (shouldScroll) {
+            requestAnimationFrame(() => scrollToBottom());
+          }
           if (newMsg.sender_id !== user?.id) {
             markMessagesRead(conversationId);
           }
@@ -105,7 +124,7 @@ export default function ConversationPage({ params }: PageProps) {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [conversationId, user?.id]);
+  }, [conversationId, scrollToBottom, user?.id]);
 
   // Realtime participant updates (for read receipts)
   useEffect(() => {
@@ -190,15 +209,18 @@ export default function ConversationPage({ params }: PageProps) {
       body: string,
       attachment?: { url: string; type: string; name: string }
     ) => {
-      await sendMessage(
+      const sent = await sendMessage(
         conversationId,
         body,
         attachment?.url,
         attachment?.type,
         attachment?.name
       );
+      shouldAutoScrollRef.current = true;
+      setMessages((prev) => prev.some((message) => message.id === sent.id) ? prev : [...prev, sent]);
+      requestAnimationFrame(() => scrollToBottom());
     },
-    [conversationId]
+    [conversationId, scrollToBottom]
   );
 
   if (!user) return null;
@@ -252,7 +274,7 @@ export default function ConversationPage({ params }: PageProps) {
         </div>
 
         {/* Messages area */}
-        <div className="flex-1 overflow-y-auto py-4 space-y-1">
+        <div ref={messageListRef} onScroll={handleMessageScroll} className="flex-1 overflow-y-auto py-4 space-y-1">
           {loading ? (
             <div className="space-y-4 px-4">
               {[1, 2, 3, 4].map((i) => (

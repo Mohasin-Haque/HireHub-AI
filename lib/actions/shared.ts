@@ -207,21 +207,23 @@ export async function logActivity(action: string, entity?: string, entityId?: st
 
 export async function getConversations() {
   const { supabase, user } = await getAuthUser();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('conversation_participants')
     .select('conversation_id, conversations(*, messages(body, created_at, sender_id))')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
   return data || [];
 }
 
 export async function getMessages(conversationId: string) {
   const { supabase } = await getAuthUser();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('messages')
-    .select('*, users!sender_id(email)')
+    .select('*')
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
   return data || [];
 }
 
@@ -266,39 +268,31 @@ export async function markMessagesRead(conversationId: string) {
 
 export async function getConversationParticipants(conversationId: string) {
   const { supabase } = await getAuthUser();
-  const { data } = await supabase
-    .from('conversation_participants')
-    .select('user_id, last_read_at, profiles!user_id(full_name, avatar_url, headline)')
-    .eq('conversation_id', conversationId);
-  return data || [];
+  const { data, error } = await supabase.rpc('get_direct_conversation_participants', {
+    p_conversation_id: conversationId,
+  });
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((participant: any) => ({
+    user_id: participant.user_id,
+    last_read_at: participant.last_read_at,
+    profiles: participant.full_name
+      ? {
+          full_name: participant.full_name,
+          avatar_url: participant.avatar_url,
+          headline: participant.headline,
+        }
+      : null,
+  }));
 }
 
 export async function startConversation(otherUserId: string) {
   const { supabase, user } = await getAuthUser();
+  if (otherUserId === user.id) throw new Error('You cannot start a conversation with yourself.');
 
-  // Check if conversation already exists
-  const { data: existing } = await supabase
-    .from('conversation_participants')
-    .select('conversation_id')
-    .eq('user_id', user.id);
+  const { data: conversationId, error } = await supabase
+    .rpc('start_direct_conversation', { recipient_id: otherUserId });
+  if (error || !conversationId) throw new Error(error?.message || 'Failed to start conversation.');
 
-  if (existing?.length) {
-    const myConvIds = existing.map((p: any) => p.conversation_id);
-    const { data: shared } = await supabase
-      .from('conversation_participants')
-      .select('conversation_id')
-      .eq('user_id', otherUserId)
-      .in('conversation_id', myConvIds);
-    if (shared?.length) return shared[0].conversation_id;
-  }
-
-  const { data: conv } = await supabase.from('conversations').insert({}).select().single();
-  if (!conv) throw new Error('Failed to create conversation');
-
-  await supabase.from('conversation_participants').insert([
-    { conversation_id: conv.id, user_id: user.id },
-    { conversation_id: conv.id, user_id: otherUserId },
-  ]);
-
-  return conv.id;
+  return conversationId;
 }

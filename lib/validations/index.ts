@@ -56,7 +56,7 @@ export const applyJobSchema = z.object({
   fullName: z.string().min(2, 'Full name is required'),
   email: z.string().email('Valid email is required'),
   coverLetter: z.string().min(30, 'Cover letter must be at least 30 characters'),
-  resumeUrl: z.string().url('Please provide a valid resume link').optional().or(z.literal('')),
+  resumeUrl: z.string().url('Please provide a valid resume URL').min(1, 'Resume URL is required'),
 });
 
 export const profileSchema = z.object({

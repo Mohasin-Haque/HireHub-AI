@@ -32,34 +32,39 @@ export function ConversationList({ currentUserId, onNewChat }: ConversationListP
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
-    const raw = (await getConversations()) as unknown as ConversationPreview[];
-    const enriched = await Promise.all(
-      raw.map(async (row) => {
-        const convRaw = row.conversations;
-        const conv = Array.isArray(convRaw) ? convRaw[0] : convRaw;
-        if (!conv) return null;
-        const participants = (await getConversationParticipants(conv.id)) as unknown as ChatParticipant[];
-        const other = participants.find((p) => p.user_id !== currentUserId) ?? null;
-        const myParticipant = participants.find((p) => p.user_id === currentUserId);
-        const msgs = conv.messages ?? [];
-        const lastMsg = msgs[msgs.length - 1];
-        const unread =
-          !!lastMsg &&
-          lastMsg.sender_id !== currentUserId &&
-          (!myParticipant?.last_read_at ||
-            new Date(lastMsg.created_at) > new Date(myParticipant.last_read_at));
-        return {
-          id: conv.id,
-          updatedAt: conv.updated_at,
-          lastMessage: lastMsg?.body ?? '',
-          lastSenderId: lastMsg?.sender_id ?? '',
-          other,
-          unread,
-        } satisfies ConversationItem;
-      })
-    );
-    setItems(enriched.filter(Boolean) as ConversationItem[]);
-    setLoading(false);
+    try {
+      const raw = (await getConversations()) as unknown as ConversationPreview[];
+      const enriched = await Promise.all(
+        raw.map(async (row) => {
+          const convRaw = row.conversations;
+          const conv = Array.isArray(convRaw) ? convRaw[0] : convRaw;
+          if (!conv) return null;
+          const participants = (await getConversationParticipants(conv.id)) as unknown as ChatParticipant[];
+          const other = participants.find((p) => p.user_id !== currentUserId) ?? null;
+          const myParticipant = participants.find((p) => p.user_id === currentUserId);
+          const msgs = conv.messages ?? [];
+          const lastMsg = msgs[msgs.length - 1];
+          const unread =
+            !!lastMsg &&
+            lastMsg.sender_id !== currentUserId &&
+            (!myParticipant?.last_read_at ||
+              new Date(lastMsg.created_at) > new Date(myParticipant.last_read_at));
+          return {
+            id: conv.id,
+            updatedAt: conv.updated_at,
+            lastMessage: lastMsg?.body ?? '',
+            lastSenderId: lastMsg?.sender_id ?? '',
+            other,
+            unread,
+          } satisfies ConversationItem;
+        })
+      );
+      setItems(enriched.filter(Boolean) as ConversationItem[]);
+    } catch (error) {
+      console.error('Failed to load conversations', error);
+    } finally {
+      setLoading(false);
+    }
   }, [currentUserId]);
 
   useEffect(() => {

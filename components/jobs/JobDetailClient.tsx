@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { toggleBookmark } from '@/lib/actions/candidate';
+import { getCandidateApplications, toggleBookmark } from '@/lib/actions/candidate';
 import { startConversation } from '@/lib/actions/shared';
 import { formatSalary, formatDate } from '@/lib/utils';
 import { ApplyModal } from '@/components/jobs/ApplyModal';
@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   MapPin, DollarSign, Bookmark, Send, Sparkles,
-  ExternalLink, ChevronLeft, HelpCircle, Eye, MessageSquare,
+  ExternalLink, ChevronLeft, HelpCircle, Eye, MessageSquare, CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -19,11 +19,18 @@ export function JobDetailClient({ job }: { job: any }) {
   const router = useRouter();
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isApplyOpen, setIsApplyOpen] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
   const [interviewQuestions, setInterviewQuestions] = useState<Array<{ category: string; question: string; evalCriteria: string }>>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [messagingEmployer, setMessagingEmployer] = useState(false);
 
   const employerOwnerId = job.companies?.owner_id ?? null;
+
+  useEffect(() => {
+    getCandidateApplications()
+      .then((applications) => setHasApplied(applications.some((application: any) => application.job_id === job.id)))
+      .catch(() => setHasApplied(false));
+  }, [job.id]);
 
   const handleMessageEmployer = async () => {
     if (!employerOwnerId) return toast.error('Employer contact not available');
@@ -31,8 +38,8 @@ export function JobDetailClient({ job }: { job: any }) {
     try {
       const convId = await startConversation(employerOwnerId);
       router.push(`/dashboard/messages/${convId}`);
-    } catch {
-      toast.error('Sign in to message the employer');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to start a conversation');
     } finally {
       setMessagingEmployer(false);
     }
@@ -152,10 +159,17 @@ export function JobDetailClient({ job }: { job: any }) {
               <MessageSquare className="w-4 h-4" />
               Message
             </Button>
-            <Button onClick={() => setIsApplyOpen(true)} variant="primary" size="lg" className="gap-2">
-              <Send className="w-4 h-4" />
-              Apply Now
-            </Button>
+            {hasApplied ? (
+              <Button variant="outline" size="lg" className="gap-2" disabled>
+                <CheckCircle2 className="w-4 h-4" />
+                Applied
+              </Button>
+            ) : (
+              <Button onClick={() => setIsApplyOpen(true)} variant="primary" size="lg" className="gap-2">
+                <Send className="w-4 h-4" />
+                Apply Now
+              </Button>
+            )}
           </div>
         </div>
 
@@ -249,10 +263,17 @@ export function JobDetailClient({ job }: { job: any }) {
             </div>
             <h4 className="font-bold text-lg text-slate-900 dark:text-white">Ready to Apply?</h4>
             <p className="text-xs text-slate-500">Submit your application in 1-click. Our AI matches your profile score directly with the hiring lead.</p>
-            <Button onClick={() => setIsApplyOpen(true)} variant="primary" className="w-full gap-2">
-              <Send className="w-4 h-4" />
-              Apply for this Position
-            </Button>
+            {hasApplied ? (
+              <Button variant="outline" className="w-full gap-2" disabled>
+                <CheckCircle2 className="w-4 h-4" />
+                Application Submitted
+              </Button>
+            ) : (
+              <Button onClick={() => setIsApplyOpen(true)} variant="primary" className="w-full gap-2">
+                <Send className="w-4 h-4" />
+                Apply for this Position
+              </Button>
+            )}
           </div>
 
           <div className="p-6 rounded-3xl glass-panel space-y-4">
@@ -279,7 +300,12 @@ export function JobDetailClient({ job }: { job: any }) {
         </aside>
       </div>
 
-      <ApplyModal job={normalized} isOpen={isApplyOpen} onClose={() => setIsApplyOpen(false)} />
+      <ApplyModal
+        job={normalized}
+        isOpen={isApplyOpen}
+        onClose={() => setIsApplyOpen(false)}
+        onApplied={() => setHasApplied(true)}
+      />
     </div>
   );
 }

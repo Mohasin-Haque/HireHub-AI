@@ -33,13 +33,19 @@ async function ApplicationData({ id }: { id: string }) {
         </Link>
       <div className="p-8 rounded-3xl glass-panel">
         <div className="flex items-start gap-6">
-          <Image
-            src={profile.avatar_url || ''}
-            alt={profile.full_name}
-            width={80}
-            height={80}
-            className="rounded-2xl"
-          />
+          {profile.avatar_url ? (
+            <Image
+              src={profile.avatar_url}
+              alt={profile.full_name}
+              width={80}
+              height={80}
+              className="rounded-2xl"
+            />
+          ) : (
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-200 text-2xl font-bold text-slate-500">
+              {profile.full_name?.[0]?.toUpperCase() || '?'}
+            </div>
+          )}
           <div className="flex-1">
             <h1 className="text-2xl font-bold">{profile.full_name}</h1>
             <p className="text-sm text-slate-500">{profile.headline}</p>

@@ -86,10 +86,20 @@ describe('Applications — applyJobSchema', () => {
     fullName: 'Alex Morgan',
     email: 'alex@example.com',
     coverLetter: 'I am very excited to apply for this position and believe my skills align perfectly.',
+    resumeUrl: 'https://example.com/resume.pdf',
   };
 
-  it('accepts valid application', () => {
+  it('accepts valid application with resume URL', () => {
     expect(applyJobSchema.safeParse(validApplication).success).toBe(true);
+  });
+
+  it('rejects application without resume URL', () => {
+    const { resumeUrl: _, ...withoutResume } = validApplication;
+    expect(applyJobSchema.safeParse(withoutResume).success).toBe(false);
+  });
+
+  it('rejects empty string resume URL', () => {
+    expect(applyJobSchema.safeParse({ ...validApplication, resumeUrl: '' }).success).toBe(false);
   });
 
   it('rejects short full name', () => {
@@ -104,19 +114,8 @@ describe('Applications — applyJobSchema', () => {
     expect(applyJobSchema.safeParse({ ...validApplication, coverLetter: 'Too short' }).success).toBe(false);
   });
 
-  it('accepts valid resume URL', () => {
-    const withResume = { ...validApplication, resumeUrl: 'https://example.com/resume.pdf' };
-    expect(applyJobSchema.safeParse(withResume).success).toBe(true);
-  });
-
   it('rejects invalid resume URL', () => {
-    const withBadResume = { ...validApplication, resumeUrl: 'not-a-url' };
-    expect(applyJobSchema.safeParse(withBadResume).success).toBe(false);
-  });
-
-  it('accepts empty string resume URL', () => {
-    const withEmptyResume = { ...validApplication, resumeUrl: '' };
-    expect(applyJobSchema.safeParse(withEmptyResume).success).toBe(true);
+    expect(applyJobSchema.safeParse({ ...validApplication, resumeUrl: 'not-a-url' }).success).toBe(false);
   });
 });
 

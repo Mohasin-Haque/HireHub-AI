@@ -91,13 +91,19 @@ export function CompanyReviews({ companyId, reviews }: { companyId: string, revi
           reviews.map(review => (
             <div key={review.id} className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800">
               <div className="flex items-start gap-4">
-                <Image
-                  src={review.profiles.avatar_url || ''}
-                  alt={review.profiles.full_name}
-                  width={40}
-                  height={40}
-                  className="rounded-full"
-                />
+                {review.profiles.avatar_url ? (
+                  <Image
+                    src={review.profiles.avatar_url}
+                    alt={review.profiles.full_name}
+                    width={40}
+                    height={40}
+                    className="rounded-full"
+                  />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-sm font-bold text-slate-500">
+                    {review.profiles.full_name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                )}
                 <div className="flex-1">
                   <div className="flex justify-between items-center">
                     <div>

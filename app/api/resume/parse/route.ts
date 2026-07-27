@@ -21,6 +21,78 @@ export async function POST(req: NextRequest) {
       return apiError('No resume file provided.', 400);
     }
 
+    const maxSize = 5 * 1024 * 1024;
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    if (file.size > maxSize) return apiError('File size must be under 5MB.', 400);
+    if (!allowedTypes.includes(file.type)) return apiError('Only PDF and Word documents are allowed.', 400);
+
+    // Ensure a profile exists before recording the file as a resume version.
+    let { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!profile) {
+      const { data: createdProfile, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: user.id,
+          full_name: user.email?.split('@')[0] || 'Candidate',
+          headline: 'Professional',
+          bio: 'Profile created from resume upload.',
+          location: 'Not specified',
+          skills: [],
+          experience_yrs: 0,
+        })
+        .select('id')
+        .single();
+      if (profileError || !createdProfile) return apiError(profileError?.message || 'Failed to create profile.', 500);
+      profile = createdProfile;
+    }
+
+    const extension = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+    const objectPath = `${user.id}/${Date.now()}.${extension}`;
+    const { data: uploadedFile, error: uploadError } = await supabase.storage
+      .from('resumes')
+      .upload(objectPath, file, { upsert: false, contentType: file.type });
+    if (uploadError) return apiError(uploadError.message, 500);
+
+    const { data: signedFile, error: signedUrlError } = await supabase.storage
+      .from('resumes')
+      .createSignedUrl(uploadedFile.path, 60 * 60 * 24 * 365);
+    if (signedUrlError) return apiError(signedUrlError.message, 500);
+
+    await supabase.from('resume_versions').update({ is_active: false }).eq('profile_id', profile.id);
+    const { error: versionError } = await supabase.from('resume_versions').insert({
+      profile_id: profile.id,
+      file_name: file.name,
+      file_url: signedFile.signedUrl,
+      file_size: file.size,
+      is_active: true,
+    });
+    if (versionError) return apiError(versionError.message, 500);
+
+    const { error: resumeUpdateError } = await supabase.from('profiles').update({
+      resume_url: signedFile.signedUrl,
+      resume_file_name: file.name,
+      updated_at: new Date().toISOString(),
+    }).eq('user_id', user.id);
+    if (resumeUpdateError) return apiError(resumeUpdateError.message, 500);
+
+    // PDF is the format currently supported by the parser. Word files are still
+    // safely stored and attached to the application, but are not auto-parsed.
+    if (file.type !== 'application/pdf') {
+      return NextResponse.json({
+        message: 'Resume uploaded successfully. Parsing is currently available for PDF files only.',
+        resumeUrl: signedFile.signedUrl,
+        parsingWarning: 'Upload a PDF to auto-fill your profile.',
+      });
+    }
+
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pdfParse = require('pdf-parse');
@@ -28,7 +100,11 @@ export async function POST(req: NextRequest) {
     const resumeText = pdfData.text;
 
     if (!resumeText) {
-      return apiError('Could not extract text from PDF.', 400);
+      return NextResponse.json({
+        message: 'Resume uploaded successfully, but no text could be extracted for parsing.',
+        resumeUrl: signedFile.signedUrl,
+        parsingWarning: 'Your resume is attached; use a text-based PDF to auto-fill your profile.',
+      });
     }
 
     const extractedData: any = await extractResumeDataWithHistory(resumeText);
@@ -99,8 +175,17 @@ export async function POST(req: NextRequest) {
       // Non-critical — don't fail the whole request
     }
 
+    // Preserve the actual Storage object URL; parsed resume content may contain
+    // an unrelated or stale link that must not replace the uploaded file.
+    await supabase.from('profiles').update({
+      resume_url: signedFile.signedUrl,
+      resume_file_name: file.name,
+      updated_at: new Date().toISOString(),
+    }).eq('user_id', user.id);
+
     return NextResponse.json({
       message: 'Resume parsed and profile updated successfully!',
+      resumeUrl: signedFile.signedUrl,
       data: { ...extractedData, atsScore },
     });
 
